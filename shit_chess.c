@@ -44,10 +44,10 @@ main()
 	U8 from, to;
 	for(;;) { // strange things are happening 
 LOOP: // works ok to me
-		pass = !parseInput(&from, &to);
-		if (pass) goto LOOP;
-		pass = !movePiece(from, to, blackplaying);
-		if (pass) goto LOOP;
+		pass = parseInput(&from, &to);
+		if (!pass) goto LOOP;
+		pass = movePiece(from, to, blackplaying);
+		if (!pass) goto LOOP;
 		blackplaying=!blackplaying;
 		blackplaying?puts("\nBlack to play"):puts("\nWhite to play");
 
@@ -351,13 +351,6 @@ PROMOTION:
 		if (from==0x3F) movementFlags &= 0xDF;
 		if (from==0x38) movementFlags &= 0xEF;
 	}
-	
-	puts("Movement Flags:");
-	puts("");
-	if (movementFlags&0x8) { 
-		movementFlags&=0xF7;
-	} else	movementFlags&=0xF0;
-	printBits(movementFlags);
 
 	return true;
 }
