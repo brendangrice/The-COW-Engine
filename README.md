@@ -10,4 +10,6 @@ No A.I. is currently included, plays locally by switching between white and blac
 
 If you input an incorrect/illegal move you must input another move.
 
+Implemented using [bitboards](https://www.chessprogramming.org/Bitboards)
+
 Takes input in [algebraic form](https://en.wikipedia.org/wiki/Algebraic_notation_(chess))
