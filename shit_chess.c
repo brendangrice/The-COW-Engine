@@ -108,8 +108,8 @@ calculateAttackVectors(bool black)
 	bool b;
 	for (int i = 0; i < 64; i++) {
 		if ((piece=findPiece(i, &a, &b))!='.') {
-			if (piece == 'P' & !black) vector |= whitePawnAttackVectors(i);
-			if (piece == 'p' & black) vector |= blackPawnAttackVectors(i);
+			if ((piece == 'P') & (!black)) vector |= whitePawnAttackVectors(i);
+			if ((piece == 'p') & black) vector |= blackPawnAttackVectors(i);
 			piece-=32*black;
 			switch(piece)
 			{
@@ -137,11 +137,10 @@ calculateAttackVectors(bool black)
 void
 printBoard(U64 b)
 {
-	U64 board = b;
 
 #ifdef DEBUG //compile with debug to see boards as just bits
 	for (int i = 1; i <= 8; i++) { // go through the long long and make bytes
-		printBits(board>>(64-(i*8))&0xFF);
+		printBits(b>>(64-(i*8))&0xFF);
 	}
 	puts("");
 #endif
@@ -208,7 +207,7 @@ movePiece(U8 from, U8 to, bool moveblack)
 	findPiece(from, &frompiece, &fromcolourblack);
 	findPiece(to, &topiece, &tocolourblack);
 
-	if (moveblack-fromcolourblack || frompiece==nopiece || !(fromcolourblack^tocolourblack)&topiece!=nopiece) return false; // if the from piece doesn't exist or both are the same colour.
+	if (moveblack-fromcolourblack || frompiece==nopiece || !(fromcolourblack^tocolourblack)&(topiece!=nopiece)) return false; // if the from piece doesn't exist or both are the same colour.
 	//do testing based on piece
 	switch(frompiece) {
 		case(pawn):
@@ -231,7 +230,7 @@ movePiece(U8 from, U8 to, bool moveblack)
 				puts("Enter which piece you want (R=1, K=2, B=3, Q=4): ");
 				U8 pieceno;
 PROMOTION:
-				scanf("%d", &pieceno);
+				scanf("%c", &pieceno);
 				switch(pieceno) {
 					case(rook):
 					case(knight):

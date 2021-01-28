@@ -8,10 +8,10 @@ whitePawnMovement(U8 from, U8 to)
 {
 	U64 p = 1;
 
-	if (movementFlags&7 && (from>>3)==4 && (to-9==from|to-7==from) && to==40+(movementFlags&0x7)) return 2;
+	if (movementFlags&7 && (from>>3)==4 && ((to-9==from)|(to-7==from)) && to==40+(movementFlags&0x7)) return 2;
 
 	if (whitePawnAttackVectors(from)&p<<to&bitboard[black]) return true; // taking
-	if (bitboard[total]&p<<from+8) return false; // if there's something in front of the pawn it can't move
+	if (bitboard[total]&p<<(from+8)) return false; // if there's something in front of the pawn it can't move
 	if (to-from==16 && (from>>3)==1) {
 		movementFlags&=0xF0;
 		movementFlags|=from%8;
@@ -26,10 +26,10 @@ blackPawnMovement(U8 from, U8 to)
 {
 	U64 p = 1;
 
-	if (movementFlags&7 && (from>>3)==3 && (from-9==to|from-7==to) && to==16+(movementFlags&0x7)) return 2; // en passant
+	if (movementFlags&7 && (from>>3)==3 && ((from-9==to)|(from-7==to)) && to==16+(movementFlags&0x7)) return 2; // en passant
 
 	if (blackPawnAttackVectors(from)&p<<to&(bitboard[black]^bitboard[total])) return true; // taking
-	if (bitboard[total]&p<<from-8) return false; // if there's something in front of the pawn it can't move
+	if (bitboard[total]&p<<(from-8)) return false; // if there's something in front of the pawn it can't move
 	if (from-to==16 && (from>>3)==6) {
 		movementFlags&=0xF0;
 		movementFlags|=from%8;
@@ -156,14 +156,14 @@ knightAttackVectors(U8 pos)
 	U8 rdist = pos%8;
 	U8 tdist = 7-(pos>>3);
 	U8 bdist = pos>>3;
-	if (rdist>0 && tdist>1) vector |= p<<pos+15; // NNW
-	if (rdist>1 && tdist>0) vector |= p<<pos+6; // WNW
-	if (rdist>1 && bdist>0) vector |= p<<pos-10; // WSW
-	if (rdist>0 && bdist>1) vector |= p<<pos-17; // SSW
-	if (ldist>0 && bdist>1) vector |= p<<pos-15; // SSE
-	if (ldist>1 && bdist>0) vector |= p<<pos-6; // ESE
-	if (ldist>1 && tdist>0) vector |= p<<pos+10; // ENE
-	if (ldist>0 && tdist>1) vector |= p<<pos+17; // NNE
+	if (rdist>0 && tdist>1) vector |= p<<(pos+15); // NNW
+	if (rdist>1 && tdist>0) vector |= p<<(pos+6); // WNW
+	if (rdist>1 && bdist>0) vector |= p<<(pos-10); // WSW
+	if (rdist>0 && bdist>1) vector |= p<<(pos-17); // SSW
+	if (ldist>0 && bdist>1) vector |= p<<(pos-15); // SSE
+	if (ldist>1 && bdist>0) vector |= p<<(pos-6); // ESE
+	if (ldist>1 && tdist>0) vector |= p<<(pos+10); // ENE
+	if (ldist>0 && tdist>1) vector |= p<<(pos+17); // NNE
 	return vector;
 }
 
@@ -211,15 +211,15 @@ kingAttackVectors(U8 pos)
 	U8 tdist = 7-(pos>>3);
 	U8 bdist = pos>>3;
 	
-	if (tdist>0) vector|=p<<pos+8; //N
-	if (rdist>0) vector|=p<<pos-1; //E
-	if (bdist>0) vector|=p<<pos-8; //S
-	if (ldist>0) vector|=p<<pos+1; //W
+	if (tdist>0) vector|=p<<(pos+8); //N
+	if (rdist>0) vector|=p<<(pos-1); //E
+	if (bdist>0) vector|=p<<(pos-8); //S
+	if (ldist>0) vector|=p<<(pos+1); //W
 
-	vector |= ((vector&(p<<pos+8))>>1)&((vector&(p<<pos-1))<<8);
-	vector |= ((vector&(p<<pos-1))>>8)&((vector&(p<<pos-8))>>1);
-	vector |= ((vector&(p<<pos-8))<<1)&((vector&(p<<pos+1))>>8);
-	vector |= ((vector&(p<<pos+1))<<8)&((vector&(p<<pos+8))<<1);
+	vector |= ((vector&(p<<(pos+8)))>>1)&((vector&(p<<(pos-1)))<<8);
+	vector |= ((vector&(p<<(pos-1)))>>8)&((vector&(p<<(pos-8)))>>1);
+	vector |= ((vector&(p<<(pos-8)))<<1)&((vector&(p<<(pos+1)))>>8);
+	vector |= ((vector&(p<<(pos+1)))<<8)&((vector&(p<<(pos+8)))<<1);
 
 	return vector;
 }
