@@ -303,26 +303,28 @@ PROMOTION:
 	// set to piece with opposite colour. remove from piece
 	// calc attack vectors
 	// if the king is being attacked roll back (no move made)
+	//
+	// tries to update a piece's position
 	if (fromcolourblack) {
-		bitboard[black]^=p<<from;	
-		bitboard[black]|=p<<to;	
-	} else 	bitboard[black]&=(-1^(p<<to)); //not didnt seem to be working
+		bitboard[black]^=p<<from;	// remove the old piece's position
+		bitboard[black]|=p<<to;		// update it to the new spot
+	} else 	bitboard[black]&=(-1^(p<<to)); // if the new piece is white it needs to be removed from the black board
 	bitboard[frompiece]^=p<<from; // update piece moving
 	if (topiece!=nopiece) bitboard[topiece]^=p<<to; // remove taken piece
-	bitboard[frompiece]|=p<<to;
+	bitboard[frompiece]|=p<<to; // move the from piece
 	bitboard[total]^=p<<from; // update total board for tracking/finding pieces
 	bitboard[total]|=p<<to;	
 	
 
 // bitboard[king]&(((moveblack-1)&bitboard[total])^bitboard[black])&calculateAttackVectors(!moveblack); returns white/black's threatened king position
-	// return a white or black board & with king. If attack 
-	// (opposite colour) & with the white/black king its
-	//  under threat.
+	// white or black board (player colour) & with king. If attack 
+	// (opposite colour) & with the white/black king its under threat.
 
+	// this should be rewritten to be more robust and predictive
 	if (bitboard[king]&(((moveblack-1)&bitboard[total])^bitboard[black])&calculateAttackVectors(!moveblack)) {
 		puts("Check");	
 		
-		// undo piece movement
+		// if the king is under attack we need to undo piece movement
 		
 		if (fromcolourblack) {
 			bitboard[black]^=p<<from;	
@@ -339,14 +341,15 @@ PROMOTION:
 		return false;
 	}
 
+	// if a king or rook succesfully moved
 	if (frompiece==king) {
-		if (from==0x3) movementFlags &= 0x3F;
+		if (from==0x3) movementFlags &= 0x3F; // can't castle either way
 		if (from==0x3B) movementFlags &= 0xCF;
 	}
 
 	if (frompiece==rook) {
-		if (from==0x7) movementFlags &= 0x7F;
-		if (from==0) movementFlags &= 0xBF;
+		if (from==0x7) movementFlags &= 0x7F; // cant castle left anymore
+		if (from==0) movementFlags &= 0xBF; // cant castle right anymore
 		if (from==0x3F) movementFlags &= 0xDF;
 		if (from==0x38) movementFlags &= 0xEF;
 	}

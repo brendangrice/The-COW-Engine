@@ -132,7 +132,7 @@ rookAttackVectors(Coord pos)
 	U64 p = 1;
 	for (int i = pos+8; i < 64; i+=8) {
 		vector1 |= p<<i; //NE 
-		if (vector1&bitboard[total]) break;
+		if (vector1&bitboard[total]) break; // stops when there's something in the way
 	}
 	for (int i = pos-8; i > -1; i-=8) {
 		vector2 |= p<<i; //NE 
@@ -179,7 +179,7 @@ bishopAttackVectors(Coord pos)
 	U64 p = 1;
 	for (int i = pos+7; i < 64 && i%8!=7; i+=7) {
 		vector1 |= p<<i; //NE 
-		if (vector1&bitboard[total]) break;
+		if (vector1&bitboard[total]) break; //stops when there's something in the way
 	}
 	for (int i = pos-9; i > -1 && i%8!=7; i-=9) {
 		vector2 |= p<<i; //SE 
@@ -199,7 +199,7 @@ bishopAttackVectors(Coord pos)
 Board 
 queenAttackVectors(Coord pos)
 {
-	return rookAttackVectors(pos)|bishopAttackVectors(pos);	
+	return rookAttackVectors(pos)|bishopAttackVectors(pos);	//simply works the same as if a bishop and rook were on the same piece
 }
 
 
@@ -218,7 +218,9 @@ kingAttackVectors(Coord pos)
 	if (bdist>0) vector|=p<<(pos-8); //S
 	if (ldist>0) vector|=p<<(pos+1); //W
 
-	vector |= ((vector&(p<<(pos+8)))>>1)&((vector&(p<<(pos-1)))<<8);
+	// corners
+	// if top and right are true then so is top right, etc.
+	vector |= ((vector&(p<<(pos+8)))>>1)&((vector&(p<<(pos-1)))<<8); 
 	vector |= ((vector&(p<<(pos-1)))>>8)&((vector&(p<<(pos-8)))>>1);
 	vector |= ((vector&(p<<(pos-8)))<<1)&((vector&(p<<(pos+1)))>>8);
 	vector |= ((vector&(p<<(pos+1)))<<8)&((vector&(p<<(pos+8)))<<1);
