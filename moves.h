@@ -10,32 +10,92 @@
 //
 // 1 bit represents when it was set 3 bits to represent which pawn has moved twice for en passant
 
-bool whitePawnMovement(U8 from, U8 to);
+// all the movements pieces can make
 
-bool blackPawnMovement(U8 from, U8 to);
+// pawn can move one, can move two, can promote, can take
+bool whitePawnMovement(Coord from, Coord to);
 
-bool rookAttackMovement(U8 from, U8 to);
+bool blackPawnMovement(Coord from, Coord to);
 
-bool knightAttackMovement(U8 from, U8 to);
+// all of these can move where they can attack
 
-bool bishopAttackMovement(U8 from, U8 to);
+bool rookAttackMovement(Coord from, Coord to);
 
-bool queenAttackMovement(U8 from, U8 to);
+bool knightAttackMovement(Coord from, Coord to);
 
-bool kingAttackMovement(U8 from, U8 to);
+bool bishopAttackMovement(Coord from, Coord to);
 
-U64 whitePawnAttackVectors(U8 pos);
+bool queenAttackMovement(Coord from, Coord to);
 
-U64 blackPawnAttackVectors(U8 pos);
+// king also can castle
 
-U64 rookAttackVectors(U8 pos);
+bool kingAttackMovement(Coord from, Coord to);
 
-U64 knightAttackVectors(U8 pos);
+// all the different positions a piece can attack
 
-U64 bishopAttackVectors(U8 pos);
+// 101
+// 0P0
+Board whitePawnAttackVectors(Coord pos);
 
-U64 queenAttackVectors(U8 pos);
+// 0p0
+// 101
+Board blackPawnAttackVectors(Coord pos);
 
-U64 kingAttackVectors(U8 pos);
+// Ordinal Directions
+//      ^
+//      |
+//    00100
+//    00100
+// <- 11R11 ->
+//    00100
+//    00100
+//      |
+//      V
+Board rookAttackVectors(Coord pos);
+
+// L and J shapes
+// 01010
+// 10001
+// 00N00
+// 10001
+// 01010
+Board knightAttackVectors(Coord pos);
+
+/* 
+// Diagonals
+// \           /
+//   \       /
+//     10001
+//     01010
+//     00B00
+//     01010
+//     10001
+//   /       \
+// /            \
+*/
+
+Board bishopAttackVectors(Coord pos);
+
+// Rook and Bishop movement
+/* \     ^     /
+//   \   |   /
+//     10101
+//     01110
+//  <- 11Q11 ->
+//     01110
+//     10101
+//   /   |   \
+// /     V     \
+*/ 
+
+Board queenAttackVectors(Coord pos);
+// Every Square immediately around the king
+// 00000
+// 01110
+// 01K10
+// 01110
+// 00000
+
+Board kingAttackVectors(Coord pos);
 
 #endif

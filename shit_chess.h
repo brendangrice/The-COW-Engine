@@ -8,8 +8,11 @@
 #include "types.h"
 #include "moves.h"
 
+// Should attack boards be tracked like this
+// when they need to constantly be re-evaluated anyways?
+// mostly used for debugging
 
-enum {
+enum { // all available boards
 	pawn,
 	rook,
 	knight,
@@ -17,8 +20,8 @@ enum {
 	queen,
 	king,
 	black,
-	whiteAttack,
-	blackAttack,
+	whiteattack,
+	blackattack,
 	total,
 	nopiece,
 };
@@ -40,11 +43,11 @@ enum {
  *
  */
 
-U64 calculateAttackVectors(bool black); //returns an attack vector for a colour
-void printBoard();
-void printBit(U8 byte);
-bool parseInput(U8 *from, U8 *to); //reads input and gives from and to as coordinates (0-64)
-bool movePiece(U8 from, U8 to, bool moveblack); //returns true if it moved the piece
-char findPiece(U8 pos, U8 *piece, bool *colourblack); //returns a char representation of a piece for printing. A number as per the enum and a boolean on the colour of the piece.
+Board calculateAttackVectors(bool black); //returns an attack vector for a colour
+void printBoard(Board b); // parameter is only used in debugging to print a specific board as its bit representation
+void printBits(U8 byte); // used in debugging
+bool parseInput(Coord *from, Coord *to); //reads input and gives from and to as coordinates (0-63)
+bool movePiece(Coord from, Coord to, bool moveblack); //returns true if it moved the piece takes coordinates (0-63)
+char findPiece(Coord pos, Coord *piece, bool *colourblack); //returns a char representation of a piece for printing. A number as per the enum and a boolean on the colour of the piece. takes coordinate (0-63)
 
 #endif

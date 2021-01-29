@@ -6,9 +6,9 @@
 ////
 
 // Bitboards for each piece, 1 for every player past one, 1 for attack spaces and 1 more for the total board. 
-extern U64 bitboard[CHESSPIECES+(PLAYERS-1)+2+1]; 
+extern Board bitboard[CHESSPIECES+(PLAYERS-1)+2+1]; 
 // Ugly global makes this work
-U8 movementFlags; 
+U8 movementFlags; //from moves.c
 
 void
 setBitBoard()
@@ -36,7 +36,8 @@ main()
 {
 	setBitBoard();
 	puts("White to play");
-	printBoard(bitboard[total]);
+	bitboard[blackattack] = calculateAttackVectors(1);
+	printBoard(bitboard[blackattack]);
 	// user input
 	// every time the user inputs a new move the attack vectors need to be reevaluated.
 	bool blackplaying = false;
@@ -48,7 +49,7 @@ LOOP: // works ok to me
 		if (!pass) goto LOOP;
 		pass = movePiece(from, to, blackplaying);
 		if (!pass) goto LOOP;
-		blackplaying=!blackplaying;
+		blackplaying=!blackplaying; // switch players
 		blackplaying?puts("\nBlack to play"):puts("\nWhite to play");
 
 		printBoard(bitboard[pawn]);
@@ -57,14 +58,14 @@ LOOP: // works ok to me
 }
 
 char 
-findPiece(U8 pos, U8 *piece, bool *colourblack)
+findPiece(Coord pos, U8 *piece, bool *colourblack) //returns a char representation of a piece for printing. A number as per the enum and a boolean on the colour of the piece.
 {
 	U64 p = 1;
 	char out = 'A'; // temp for checking for errors
 	*colourblack = false;
-	U64 bit = bitboard[total]&(p<<pos);
+	U64 bit = bitboard[total]&(p<<pos); // gets whatever piece is at the location
 	if (bit) {
-		if(bit&bitboard[pawn]) {
+		if(bit&bitboard[pawn]) { // ands bit to see if the piece is present on this board
 			*piece=pawn;
 		       	out = 'P';
 		}
@@ -88,30 +89,30 @@ findPiece(U8 pos, U8 *piece, bool *colourblack)
 			*piece=king;
 			out = 'K';
 		}
-		if(bit&bitboard[black]) {
+		if(bit&bitboard[black]) { // if its a black piece
 		       	*colourblack=true;
-			out += 32;
+			out += 32; // change the capital letter of a piece to a lowercase for black
 		}
-	} else {
-		*piece=nopiece;
+	} else { // if there's no piece
+		*piece=nopiece; 
 		out = '.';	
 	}
 	return out;
 }
 
-U64
-calculateAttackVectors(bool black)
+Board
+calculateAttackVectors(bool black) //returns an attack vector for a colour
 {
 	char piece;
-	U64 vector = 0;
-	U8 a;
-	bool b;
+	Board vector = 0;
+	U8 a; // unused
+	bool b; // unused
 	for (int i = 0; i < 64; i++) {
-		if ((piece=findPiece(i, &a, &b))!='.') {
-			if ((piece == 'P') & (!black)) vector |= whitePawnAttackVectors(i);
+		if ((piece=findPiece(i, &a, &b))!='.') { // find every piece that isn't a blank piece
+			if ((piece == 'P') & (!black)) vector |= whitePawnAttackVectors(i); // white and black have different attacks
 			if ((piece == 'p') & black) vector |= blackPawnAttackVectors(i);
-			piece-=32*black;
-			switch(piece)
+			piece-=32*black; //if the piece is black subtract so that the char goes into the switch cases nicely
+			switch(piece) 
 			{
 				case('R'):
 					vector |= rookAttackVectors(i);
@@ -135,7 +136,7 @@ calculateAttackVectors(bool black)
 }
 
 void
-printBoard(U64 b)
+printBoard(Board b)
 {
 
 #ifdef DEBUG //compile with debug to see boards as just bits
@@ -145,9 +146,8 @@ printBoard(U64 b)
 	puts("");
 #endif
 #ifndef DEBUG	
-	U8 a;
-	bool a2;
-	findPiece(63,&a,&a2);
+	U8 a; // unused
+	bool a2; // unused
 	for (int i = 0; i < 64; i++) {
 		if (!(i%8))  { 
 			putchar('\n');
@@ -161,7 +161,7 @@ printBoard(U64 b)
 }
 
 void 
-printBits(U8 byte) 
+printBits(U8 byte) // used in debugging
 {
 	for (int i = 0; i < 8; i++) {
 		putchar(byte&128?'1':'0');
@@ -171,7 +171,7 @@ printBits(U8 byte)
 }
 
 bool
-parseInput(U8 *coord1, U8 *coord2) 
+parseInput(Coord *coord1, Coord *coord2) 
 {
 	char l1, l2;
 	int n1, n2;
@@ -190,18 +190,18 @@ parseInput(U8 *coord1, U8 *coord2)
 }
 
 bool
-movePiece(U8 from, U8 to, bool moveblack)
+movePiece(Coord from, Coord to, bool moveblack)
 {
 	U64 p = 1;
 	bool test;
 	
-	U8 frompiece;
+	Coord frompiece;
 	bool fromcolourblack;
 
-	U8 topiece;
+	Coord topiece;
 	bool tocolourblack;
 
-	U8 passantpiece;
+	Coord passantpiece;
 	bool passantcolourblack;
 
 	findPiece(from, &frompiece, &fromcolourblack);

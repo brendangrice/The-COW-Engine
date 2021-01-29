@@ -1,10 +1,10 @@
 #include "moves.h"
 
 extern U8 movementFlags; // tracks what rooks and kings have moved
-U64 bitboard[CHESSPIECES+(PLAYERS-1)+2+1]; 
+Board bitboard[CHESSPIECES+(PLAYERS-1)+2+1]; // from shit_chess.c
 
 bool 
-whitePawnMovement(U8 from, U8 to)
+whitePawnMovement(Coord from, Coord to)
 {
 	U64 p = 1;
 
@@ -22,7 +22,7 @@ whitePawnMovement(U8 from, U8 to)
 }
 
 bool 
-blackPawnMovement(U8 from, U8 to) 
+blackPawnMovement(Coord from, Coord to) 
 {
 	U64 p = 1;
 
@@ -40,35 +40,38 @@ blackPawnMovement(U8 from, U8 to)
 }
 
 bool 
-rookAttackMovement(U8 from, U8 to) 
+rookAttackMovement(Coord from, Coord to) //can move to wherever it can attack
 {
 	U64 p = 1;
 	return (rookAttackVectors(from)&p<<to)>>to;
 }
 
 bool 
-knightAttackMovement(U8 from, U8 to)
+knightAttackMovement(Coord from, Coord to) //can move to wherever it can attack
+
 {
 	U64 p = 1;
 	return (knightAttackVectors(from)&p<<to)>>to;
 }
 
 bool 
-bishopAttackMovement(U8 from, U8 to) 
+bishopAttackMovement(Coord from, Coord to) //can move to wherever it can attack
+
 {
 	U64 p = 1;
 	return (bishopAttackVectors(from)&p<<to)>>to;
 }
 
 bool 
-queenAttackMovement(U8 from, U8 to)
+queenAttackMovement(Coord from, Coord to) //can move to wherever it can attack
 {
 	U64 p = 1;
 	return (queenAttackVectors(from)&p<<to)>>to;
 }
 
 bool 
-kingAttackMovement(U8 from, U8 to)
+kingAttackMovement(Coord from, Coord to) //can move to wherever it can attack + castling
+
 {
 	//castling
 	// find which castle it is and whether it can happen
@@ -81,47 +84,46 @@ kingAttackMovement(U8 from, U8 to)
 
 	if ((from>>3)==0 && movementFlags&0x80 && to==0x05) // White left
 		// Check squares are empty and not threatened
-		if (!(bitboard[total]&0x70)&&!(bitboard[blackAttack]&0x38)) return 2;
+		if (!(bitboard[total]&0x70)&&!(bitboard[blackattack]&0x38)) return 2;
 	if ((from>>3)==0 && movementFlags&0x40 && to==0x01) // White right
 		// Check squares are empty and not threatened
-		if (!(bitboard[total]&0x06)&&!(bitboard[blackAttack]&0x0E)) return 3;
+		if (!(bitboard[total]&0x06)&&!(bitboard[blackattack]&0x0E)) return 3;
 	if ((from>>3)==7 && movementFlags&0x20 && to==0x3D) // Black left
 		// Check squares are empty and not threatened
-		if (!(bitboard[total]&l1)&&!(bitboard[whiteAttack]&l2)) return 4;
+		if (!(bitboard[total]&l1)&&!(bitboard[whiteattack]&l2)) return 4;
 	if ((from>>3)==7 && movementFlags&0x10 && to==0x39) // Black right
 		// Check squares are empty and not threatened
-		if (!(bitboard[total]&l3)&&!(bitboard[whiteAttack]&l4)) return 5;
+		if (!(bitboard[total]&l3)&&!(bitboard[whiteattack]&l4)) return 5;
 
 
 
 	return (kingAttackVectors(from)&p<<to)>>to;
 }
 
-U64 
-whitePawnAttackVectors(U8 pos)
+Board 
+whitePawnAttackVectors(Coord pos) // pawns can attack diagonally
 {
 	U64 vector = 0;
 	U64 p = 1;
-	p<<=8+pos;
-	if (pos%8 != 0) vector ^= p>>1;
-	if (pos%8 != 7) vector ^= p<<1;
-	return vector;
+	p<<=8+pos; // forward one square
+	if (pos%8 != 0) vector ^= p>>1; // left
+	if (pos%8 != 7) vector ^= p<<1; // right
+	return vector; // this breaks on the last row but pawns promote there anyway
 }
 
-U64 
-blackPawnAttackVectors(U8 pos)
+Board 
+blackPawnAttackVectors(Coord pos) // pawns can attack diagonally
 {
 	U64 vector = 0;
 	U64 p = 1;
-	p<<=63;
-	p>>=8+(63-pos);
+	p<<=pos-8; // back one square
 	if (pos%8 != 0) vector ^= p>>1;
 	if (pos%8 != 7) vector ^= p<<1;
-	return vector;
+	return vector; // this breaks on the first row but pawns promote there anyway
 }
 
-U64 
-rookAttackVectors(U8 pos)
+Board 
+rookAttackVectors(Coord pos)
 {
 	U64 vector1 = 0;
 	U64 vector2 = 0;
@@ -147,8 +149,8 @@ rookAttackVectors(U8 pos)
 	return vector1|vector2|vector3|vector4;
 }
 
-U64 
-knightAttackVectors(U8 pos)
+Board 
+knightAttackVectors(Coord pos)
 {
 	U64 vector = 0;
 	U64 p = 1;
@@ -167,8 +169,8 @@ knightAttackVectors(U8 pos)
 	return vector;
 }
 
-U64 
-bishopAttackVectors(U8 pos)
+Board 
+bishopAttackVectors(Coord pos)
 {
 	U64 vector1 = 0;
 	U64 vector2 = 0;
@@ -194,15 +196,15 @@ bishopAttackVectors(U8 pos)
 	return vector1|vector2|vector3|vector4;
 }
 
-U64 
-queenAttackVectors(U8 pos)
+Board 
+queenAttackVectors(Coord pos)
 {
 	return rookAttackVectors(pos)|bishopAttackVectors(pos);	
 }
 
 
-U64 
-kingAttackVectors(U8 pos)
+Board 
+kingAttackVectors(Coord pos)
 {
 	U64 vector = 0;
 	U64 p = 1;
