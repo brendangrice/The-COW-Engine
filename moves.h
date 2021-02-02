@@ -4,6 +4,7 @@
 #ifndef MOVES_H
 #define MOVES_H
 
+// movementflags
 // 1 1 1 1 | 1 1 1 1
 // White left castle, White right castle
 // Black left castle, White right castle
@@ -13,23 +14,23 @@
 // all the movements pieces can make
 
 // pawn can move one, can move two, can promote, can take
-bool whitePawnMovement(Coord from, Coord to);
+bool whitePawnMovement(Coord from, Coord to, Boardstate bs);
 
-bool blackPawnMovement(Coord from, Coord to);
+bool blackPawnMovement(Coord from, Coord to, Boardstate bs);
 
 // all of these can move where they can attack
 
-bool rookAttackMovement(Coord from, Coord to);
+bool rookMovement(Coord from, Coord to, Board *bitboard);
 
-bool knightAttackMovement(Coord from, Coord to);
+bool knightMovement(Coord from, Coord to);
 
-bool bishopAttackMovement(Coord from, Coord to);
+bool bishopMovement(Coord from, Coord to, Board *bitboard);
 
-bool queenAttackMovement(Coord from, Coord to);
+bool queenMovement(Coord from, Coord to, Board *bitboard);
 
 // king also can castle
 
-bool kingAttackMovement(Coord from, Coord to);
+bool kingMovement(Coord from, Coord to, Boardstate bs);
 
 // all the different positions a piece can attack
 
@@ -51,7 +52,7 @@ Board blackPawnAttackVectors(Coord pos);
 //    00100
 //      |
 //      V
-Board rookAttackVectors(Coord pos);
+Board rookAttackVectors(Coord pos, Board *bitboard);
 
 // L and J shapes
 // 01010
@@ -74,7 +75,7 @@ Board knightAttackVectors(Coord pos);
 // /            \
 */
 
-Board bishopAttackVectors(Coord pos);
+Board bishopAttackVectors(Coord pos, Board *bitboard);
 
 // Rook and Bishop movement
 /* \     ^     /
@@ -88,7 +89,7 @@ Board bishopAttackVectors(Coord pos);
 // /     V     \
 */ 
 
-Board queenAttackVectors(Coord pos);
+Board queenAttackVectors(Coord pos, Board *bitboard);
 // Every Square immediately around the king
 // 00000
 // 01110
