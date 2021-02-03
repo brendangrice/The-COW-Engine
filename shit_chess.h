@@ -19,6 +19,8 @@
 #define BITBOARDSIZE (BITBOARDELEMENTS*sizeof(Board))
 // Bitboards for each piece, 1 for every player past one, 1 more for the total board. 
 #define BOARDSTATESIZE (BITBOARDSIZE*sizeof(Board)+sizeof(U8))
+//maybe make these sizeof's into const variables to reduce the number of times sizeof is used
+
 
 enum { // all available 'pieces'
 	pawn,
@@ -45,6 +47,7 @@ enum { // all available 'pieces'
  *
  */
 
+void localMultiplayer();
 Board calculateAttackVectors(Board *bitboard, bool black); //returns an attack vector for a colour on given board
 void printBoard(Board *bitboard, bool printblack); // parameter determines which way the board prints
 bool parseInput(Coord *from, Coord *to); //reads input and gives from and to as coordinates (0-63)

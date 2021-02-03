@@ -33,7 +33,32 @@ setBitBoard()
 int 
 main() 
 {
+	while (1) {
 	setBitBoard();
+	puts("Select your gamemode.");
+	puts("Local multiplayer: 1");
+	puts("Quit: q");
+	
+	char c = getc(stdin);
+
+		switch(c) {
+			case('1'):
+				localMultiplayer();
+				break;
+
+			case('q'):
+				return 0;
+				break;
+			case('Q'):
+				return 0;
+				break;
+		}
+	}
+}
+
+void
+localMultiplayer()
+{
 	puts("White to play");
 	printBoard(currBoard.bitboard, false);
 	// user input
@@ -52,7 +77,7 @@ LOOP: // works ok to me
 
 		printBoard(currBoard.bitboard, blackplaying);
 	}
-	return(0);
+	return;
 }
 
 char 
