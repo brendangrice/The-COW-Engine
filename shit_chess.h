@@ -7,6 +7,7 @@
 
 #include "types.h"
 #include "moves.h"
+#include "socket.h"
 
 // Should attack boards be tracked like this
 // when they need to constantly be re-evaluated anyways?
@@ -48,6 +49,7 @@ enum { // all available 'pieces'
  */
 
 void localMultiplayer();
+void onlineMultiplayer();
 Board calculateAttackVectors(Board *bitboard, bool black); //returns an attack vector for a colour on given board
 void printBoard(Board *bitboard, bool printblack); // parameter determines which way the board prints
 bool parseInput(Coord *from, Coord *to); //reads input and gives from and to as coordinates (0-63)

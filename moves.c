@@ -9,7 +9,7 @@ whitePawnMovement(Coord from, Coord to, Boardstate bs)
 
 	if (whitePawnAttackVectors(from)&p<<to&bs.bitboard[black]) return true; // taking
 	if (bs.bitboard[total]&p<<(from+8)) return false; // if there's something in front of the pawn it can't move
-	if (to-from==16 && (from>>3)==1) {
+	if (to-from==16 && (from>>3)==1 && ~bs.bitboard[total]&p<<(from+16)) {
 		bs.movementflags&=0xF0;
 		bs.movementflags|=from%8;
 		bs.movementflags|=0x8;
@@ -27,7 +27,7 @@ blackPawnMovement(Coord from, Coord to, Boardstate bs)
 
 	if (blackPawnAttackVectors(from)&p<<to&(bs.bitboard[black]^bs.bitboard[total])) return true; // taking
 	if (bs.bitboard[total]&p<<(from-8)) return false; // if there's something in front of the pawn it can't move
-	if (from-to==16 && (from>>3)==6) {
+	if (from-to==16 && (from>>3)==6 && ~bs.bitboard[total]&p<<(from-16)) {
 		bs.movementflags&=0xF0;
 		bs.movementflags|=from%8;
 		bs.movementflags|=0x8;

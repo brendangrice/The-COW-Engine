@@ -33,26 +33,34 @@ setBitBoard()
 int 
 main() 
 {
-	while (1) {
 	setBitBoard();
-	puts("Select your gamemode.");
-	puts("Local multiplayer: 1");
-	puts("Quit: q");
-	
-	char c = getc(stdin);
 
-		switch(c) {
+	while (1) {
+		char *cht = malloc(5);
+		puts("Local multiplayer: 1");
+		puts("Online multiplayer: 2");
+		puts("Quit: q");
+REPEATGAMEMODEINPUT:
+		fgets(cht, 5, stdin);
+
+		switch(*cht) {
 			case('1'):
 				localMultiplayer();
 				break;
-
+			case('2'):
+				onlineMultiplayer();
+				break;
 			case('q'):
 				return 0;
 				break;
 			case('Q'):
 				return 0;
 				break;
+			default:
+				goto REPEATGAMEMODEINPUT;
+				break;
 		}
+		free(cht);
 	}
 }
 
@@ -77,6 +85,35 @@ LOOP: // works ok to me
 
 		printBoard(currBoard.bitboard, blackplaying);
 	}
+	return;
+}
+
+void
+onlineMultiplayer()
+{
+	//add something to handle ip
+	char *domainandport = malloc(30);
+	char *domain = malloc(20);
+	char *port = malloc(10);
+	fputs("Enter the domain address you want to connect to: ", stdout);
+	fgets(domainandport, 30, stdin);
+	domainandport[strlen(domainandport)-1] = '\0'; // remove \n
+	char *portpos = strchr(domainandport, ':');
+	if (portpos==NULL) {
+		domain=domainandport;
+		fputs("Enter the port you want to connect to: ", stdout);
+		fgets(port, 10, stdin);
+		port[strlen(port)-1] = '\0';
+	} else {
+		domain = strncat(domain, domainandport, portpos-domainandport);
+		port = strncat(port, ++portpos, 9);
+	}
+	
+	sas *servcon = malloc(sizeof(sas));
+	bool test = serverConnect(domain, port, servcon);
+
+	printf("Connected? %d\n", test);
+
 	return;
 }
 
