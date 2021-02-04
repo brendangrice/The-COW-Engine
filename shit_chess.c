@@ -33,42 +33,33 @@ setBitBoard()
 int 
 main() 
 {
-	while (1) {
 	setBitBoard();
-	puts("Select your gamemode.");
-	puts("Local multiplayer: 1");
-	puts("Quit: q");
-	
-	char c = getc(stdin);
-
-		switch(c) {
-			case('1'):
-				localMultiplayer();
-				break;
-
-			case('q'):
-				return 0;
-				break;
-			case('Q'):
-				return 0;
-				break;
-		}
-	}
-}
-
-void
-localMultiplayer()
-{
 	puts("White to play");
 	printBoard(currBoard.bitboard, false);
 	// user input
 	// every time the user inputs a new move the attack vectors need to be reevaluated.
 	bool blackplaying = false;
 	bool test;
+	//float advantage;
 	U8 from, to;
 	for(;;) { // strange things are happening 
 LOOP: // works ok to me
-		test = parseInput(&from, &to);
+
+
+		// print the current advantage
+		//advantage = calculateAdvantage(currBoard.bitboard);
+		printf("\nAdvantage = %.3f\n", calculateAdvantage(currBoard));
+		
+		if(!blackplaying)
+		{
+			test = parseInput(&from, &to);
+		}
+		else{
+			//test = botMove(&from, &to, currBoard);
+			test = negaMax(1, calculateAdvantage(currBoard), true, currBoard, &from, &to);
+			//test = miniMax(1, calculateAdvantage(currBoard), true, currBoard, &from, &to);
+		}
+		
 		if (!test) goto LOOP;
 		test = movePiece(from, to, blackplaying);
 		if (!test) goto LOOP;
@@ -77,7 +68,7 @@ LOOP: // works ok to me
 
 		printBoard(currBoard.bitboard, blackplaying);
 	}
-	return;
+	return(0);
 }
 
 char 
@@ -166,7 +157,7 @@ debugPrintBoard(Board b) {
 	}
 	puts("");
 }
-
+//#endif
 void 
 printBits(U8 byte) // used in debugging
 {
