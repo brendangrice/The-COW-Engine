@@ -62,7 +62,7 @@ LOOP: // works ok to me
 
 		// print the current advantage
 		//advantage = calculateAdvantage(currBoard.bitboard);
-		printf("\nAdvantage = %.3f\n", calculateAdvantage(currBoard));
+		//printf("\nAdvantage = %.3f\n", calculateAdvantage(currBoard));
 		
 		if(!blackplaying)
 		{
@@ -240,14 +240,14 @@ generatePGN(Coord square, bool isBlack)
 	if(!isBlack)
 	{
 		++step;
-		sprintf(str, "%d", step);
+		//sprintf(str, "%d", step);
 		strcat(str, ". ");
 		strcat(history, str);
 	}
 	// what piece is this
 	
 	strcat(history, SQUARE_ID[square]);
-	printf("\n%s", history);
+	//printf("\n%s", history);
 	
 	/*
 	const char* move[8];
@@ -259,7 +259,7 @@ generatePGN(Coord square, bool isBlack)
 	}
 	strcpy(move, SQUARE_ID[square]);
 	strcpy(history, move);
-	printf("\n%s", history);
+	//printf("\n%s", history);
 	*/
 }
 
@@ -426,7 +426,7 @@ PROMOTION:
 
 	// this should be rewritten to be more robust and predictive
 	if (bitboard[king]&(((moveblack-1)&bitboard[total])^bitboard[black])&calculateAttackVectors(bitboard, !moveblack)) {
-		puts("Check");	
+		//puts("Check");	
 		
 		// if the king is under attack we need to undo piece movement
 		

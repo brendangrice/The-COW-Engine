@@ -196,25 +196,25 @@ calculatePositionAdvantage(Boardstate state)
 	}
 
 	/*
-	printf("\nWhite Pawn Position = %d", whitePawnPos);
-	printf("\nWhite Bishop Position = %d", whiteBishopPos);
-	printf("\nWhite Knight Position = %d", whiteKnightPos);
-	printf("\nWhite Rook Position = %d", whiteRookPos);
-	printf("\nWhite Queen Position = %d", whiteQueenPos);
-	printf("\nWhite King Position = %d", whiteKingPos);
+	//printf("\nWhite Pawn Position = %d", whitePawnPos);
+	//printf("\nWhite Bishop Position = %d", whiteBishopPos);
+	//printf("\nWhite Knight Position = %d", whiteKnightPos);
+	//printf("\nWhite Rook Position = %d", whiteRookPos);
+	//printf("\nWhite Queen Position = %d", whiteQueenPos);
+	//printf("\nWhite King Position = %d", whiteKingPos);
 
-	printf("\nBlack Pawn Position = %d", blackPawnPos);
-	printf("\nBlack Bishop Position = %d", blackBishopPos);
-	printf("\nBlack Knight Position = %d", blackKnightPos);
-	printf("\nBlack Rook Position = %d", blackRookPos);
-	printf("\nBlack Queen Position = %d", blackQueenPos);
-	printf("\nBlack King Position = %d\n", blackKingPos);
+	//printf("\nBlack Pawn Position = %d", blackPawnPos);
+	//printf("\nBlack Bishop Position = %d", blackBishopPos);
+	//printf("\nBlack Knight Position = %d", blackKnightPos);
+	//printf("\nBlack Rook Position = %d", blackRookPos);
+	//printf("\nBlack Queen Position = %d", blackQueenPos);
+	//printf("\nBlack King Position = %d\n", blackKingPos);
 	*/
 
 	int whiteTotal = whitePawnPos + whiteBishopPos + whiteKnightPos + whiteRookPos + whiteQueenPos + whiteKingPos;
 	int blackTotal = blackPawnPos + blackBishopPos + blackKnightPos + blackRookPos + blackQueenPos + blackKingPos;
 
-	//printf("\nPositional Difference : %d\n", whiteTotal - blackTotal);
+	////printf("\nPositional Difference : %d\n", whiteTotal - blackTotal);
 
 	return whiteTotal - blackTotal;
 }
@@ -246,7 +246,7 @@ calculateMaterialAdvantage(Boardstate state)
 	
 	// total number of pawns       
 	int totalPawns = numberOfBits(state.bitboard[pawn]);
-	//printf("\nPawns = %d", totalPawns);
+	////printf("\nPawns = %d", totalPawns);
 	int totalQueens = numberOfBits(state.bitboard[queen]);
     int totalBishops = numberOfBits(state.bitboard[bishop]);
     int totalKnights = numberOfBits(state.bitboard[knight]);
@@ -286,31 +286,31 @@ calculateMaterialAdvantage(Boardstate state)
 
 	int materialScore = whiteMaterial - blackMaterial;
 	/*
-	printf("\nPawns: %d", totalPawns);
-	printf("\nQueens: %d", totalQueens);
-	printf("\nBishops: %d", totalBishops);
-	printf("\nKnights: %d", totalKnights);
-	printf("\nRooks: %d", totalRooks);
-	printf("\nKings: %d", totalKings);
+	//printf("\nPawns: %d", totalPawns);
+	//printf("\nQueens: %d", totalQueens);
+	//printf("\nBishops: %d", totalBishops);
+	//printf("\nKnights: %d", totalKnights);
+	//printf("\nRooks: %d", totalRooks);
+	//printf("\nKings: %d", totalKings);
 
-	printf("\nBlack Pawns : %d", blackPawns);
-	printf("\nBlack Queens : %d", blackQueens);
-	printf("\nBlack Bishops : %d", blackBishops);
-    printf("\nBlack Knights : %d", blackKnights);
-    printf("\nBlack Rooks : %d", blackRooks);
-	printf("\nBlack Kings : %d", blackKings);
+	//printf("\nBlack Pawns : %d", blackPawns);
+	//printf("\nBlack Queens : %d", blackQueens);
+	//printf("\nBlack Bishops : %d", blackBishops);
+    //printf("\nBlack Knights : %d", blackKnights);
+    //printf("\nBlack Rooks : %d", blackRooks);
+	//printf("\nBlack Kings : %d", blackKings);
 
-    printf("\nWhite Pawns : %d", whitePawns);	
-    printf("\nWhite Queens : %d", whiteQueens);
-    printf("\nWhite Bishops : %d", whiteBishops);
-    printf("\nWhite Knights : %d", whiteKnights);
-    printf("\nWhite Rooks : %d", whiteRooks);
-    printf("\nWhite Kings : %d", whiteKings);
+    //printf("\nWhite Pawns : %d", whitePawns);	
+    //printf("\nWhite Queens : %d", whiteQueens);
+    //printf("\nWhite Bishops : %d", whiteBishops);
+    //printf("\nWhite Knights : %d", whiteKnights);
+    //printf("\nWhite Rooks : %d", whiteRooks);
+    //printf("\nWhite Kings : %d", whiteKings);
 
-    printf("\nWhite Material : %d", whiteMaterial);
-    printf("\nBlack Material : %d", blackMaterial);
+    //printf("\nWhite Material : %d", whiteMaterial);
+    //printf("\nBlack Material : %d", blackMaterial);
     
-    printf("\nMaterial Advantage : %d\n", materialScore);
+    //printf("\nMaterial Advantage : %d\n", materialScore);
 	*/
     return materialScore;
 }
@@ -318,7 +318,7 @@ calculateMaterialAdvantage(Boardstate state)
 void 
 debugPrint(Board board)
 {
-    printf("\n");
+    //printf("\n");
     for (int i = 1; i <= 8; i++) { // go through the long long and make bytes
 		//printBits(board>>(64-(i*8))&0xFF);
 	}

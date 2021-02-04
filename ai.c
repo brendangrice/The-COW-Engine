@@ -5,8 +5,8 @@
 bool
 negaMax(int depth, float score, bool isBlack, Boardstate bs, Coord *coord1, Coord *coord2)
 {
-	printf("\nCURRENT DEPTH = %d", depth);
-	printBoard(bs.bitboard, isBlack);
+	//printf("\nCURRENT DEPTH = %d", depth);
+	//printBoard(bs.bitboard, isBlack);
 	if(depth == 0)
 	{ 
 		return true;
@@ -32,36 +32,36 @@ negaMax(int depth, float score, bool isBlack, Boardstate bs, Coord *coord1, Coor
 	float bestAdvantage = currentAdvantage;
 	//printf("\n The current game state advantage = %.3f\n", currentAdvantage);
 	
-	//printf("\nMaking new board");
+	////printf("\nMaking new board");
 	Boardstate *newbs = malloc(BOARDSTATESIZE);
-	//printf("\nNew board made successfully");
+	////printf("\nNew board made successfully");
 	
 	while(attempts < 50)
 	{		
-		//printf("\n\tassign l1");
+		////printf("\n\tassign l1");
 		l1 = letter[rand()%8];
-		//printf("\n\tassign l2");
+		////printf("\n\tassign l2");
 		l2 = letter[rand()%8];
-		//printf("\n\tassign n1");
+		////printf("\n\tassign n1");
 		n1 = number[rand()%8];
-		//printf("\n\tassign n2");
+		////printf("\n\tassign n2");
 		n2 = number[rand()%8];
 		
-		//printf("\n\t\tCoord1");
+		////printf("\n\t\tCoord1");
 		
 		*coord1 = 7 - l1 + 'A' + (n1-1)*8;
-		//printf("\n\t\tCoord2");
+		////printf("\n\t\tCoord2");
 		
 		*coord2 = 7 - l2 + 'A' + (n2-1)*8;
 		
 		
-		//printf("\nAttempting fauxMove");
+		////printf("\nAttempting fauxMove");
 		if(fauxMove(*coord1, *coord2, isBlack, bs, newbs))
 		{
 			attempts++;
-			newAdvantage = calculateAdvantage(newbs);
+			newAdvantage = calculateAdvantage(*newbs);
 			if(newAdvantage <= bestAdvantage){
-				printf("\n\t\t\t ## New Best = %.3f", newAdvantage);
+				//printf("\n\t\t\t ## New Best = %.3f", newAdvantage);
 				bestAdvantage = newAdvantage;
 				bestCord1 = *coord1;
 				bestCord2 = *coord2;
@@ -78,7 +78,7 @@ negaMax(int depth, float score, bool isBlack, Boardstate bs, Coord *coord1, Coor
 	
 	Boardstate newerbs = *newbs;
 	free(newbs);
-	score = -negaMax(depth-1, score, !isBlack, newerbs, &coord1, &coord2);
+	score = -negaMax(depth-1, score, !isBlack, newerbs, coord1, coord2);
 	if(score > max)
 		max = score;
 	return true;
@@ -134,9 +134,9 @@ botMove(Coord *coord1, Coord *coord2, Boardstate state)
 			
 			// calculateAdvantage of the new state
 			newAdvantage = calculateAdvantage(newbs);
-			//printf("\n\t\t ## New Advantage = %.3f", newAdvantage);
+			////printf("\n\t\t ## New Advantage = %.3f", newAdvantage);
 			if(newAdvantage <= bestAdvantage){
-				printf("\n\t\t\t ## New Best = %.3f", newAdvantage);
+				//printf("\n\t\t\t ## New Best = %.3f", newAdvantage);
 				//push(&start, &newbs, sizeof(Boardstate));
 				bestAdvantage = newAdvantage;
 				bestCord1 = *coord1;
@@ -175,7 +175,7 @@ botMove(Coord *coord1, Coord *coord2, Boardstate state)
 	float currentAdvantage = calculateAdvantage(state);
 	float newAdvantage;
 	float bestAdvantage = currentAdvantage;
-	printf("\n The current game state advantage = %.3f\n", currentAdvantage);
+	//printf("\n The current game state advantage = %.3f\n", currentAdvantage);
 
 	int attempts = 0;
 	
@@ -204,9 +204,9 @@ botMove(Coord *coord1, Coord *coord2, Boardstate state)
 			
 			// calculateAdvantage of the new state
 			newAdvantage = calculateAdvantage(newbs);
-			//printf("\n\t\t ## New Advantage = %.3f", newAdvantage);
+			////printf("\n\t\t ## New Advantage = %.3f", newAdvantage);
 			if(newAdvantage <= bestAdvantage){
-				printf("\n\t\t\t ## New Best = %.3f", newAdvantage);
+				//printf("\n\t\t\t ## New Best = %.3f", newAdvantage);
 				//push(&start, &newbs, sizeof(Boardstate));
 				bestAdvantage = newAdvantage;
 				bestCord1 = *coord1;
