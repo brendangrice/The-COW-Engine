@@ -1,6 +1,8 @@
 #include "types.h"
 #include "shit_chess.h"
 
+#ifndef EVAL_H
+#define EVAL_H
 // count number of set bits on a given board
 int numberOfBits(Board b);
 
@@ -15,3 +17,5 @@ float calculateAdvantage();
 
 
 void debugPrint(Board board);
+
+#endif
