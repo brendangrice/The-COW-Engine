@@ -1,4 +1,4 @@
-OBJS		= shit_chess.o moves.o
+OBJS		= main.o moves.o
 CFLAGS		= -g -Wall
 
 
@@ -7,7 +7,7 @@ chess :		$(OBJS)
 
 moves.o :	moves.h
 
-shit_chess.o :	shit_chess.h types.h
+main.o :	main.h types.h
 
 
 clean :
