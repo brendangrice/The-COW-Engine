@@ -1,5 +1,5 @@
 #include "types.h"
-#include "shit_chess.h"
+#include "main.h"
 
 #ifndef MOVES_H
 #define MOVES_H
