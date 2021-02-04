@@ -13,8 +13,6 @@ negaMax(int depth, float score, bool isBlack, Boardstate bs, Coord *coord1, Coor
 	Coord bestCord1;
 	Coord bestCord2;
 	
-	Coord *tempcoord1 = malloc(sizeof(Coord));
-	Coord *tempcoord2 = malloc(sizeof(Coord));
 	
 	char l1, l2;
 	int n1, n2;
@@ -48,26 +46,23 @@ negaMax(int depth, float score, bool isBlack, Boardstate bs, Coord *coord1, Coor
 		n2 = number[rand()%8];
 		
 		printf("\n\t\tCoord1");
-		*tempcoord1 = 7 - l1 + 'A' + (n1-1)*8;
-		//*coord1 = 7 - l1 + 'A' + (n1-1)*8;
+		
+		*coord1 = 7 - l1 + 'A' + (n1-1)*8;
 		printf("\n\t\tCoord2");
-		*tempcoord2 = 7 - l2 + 'A' + (n2-1)*8;
-		//*coord2 = 7 - l2 + 'A' + (n2-1)*8;
+		
+		*coord2 = 7 - l2 + 'A' + (n2-1)*8;
 		
 		
 		printf("\nAttempting fauxMove");
-		//if(fauxMove(*coord1, *coord2, isBlack, bs, newbs))
-		if(fauxMove(*tempcoord1, *tempcoord2, isBlack, bs, newbs))
+		if(fauxMove(*coord1, *coord2, isBlack, bs, newbs))
 		{
 			attempts++;
 			newAdvantage = calculateAdvantage(newbs);
 			if(newAdvantage <= bestAdvantage){
 				printf("\n\t\t\t ## New Best = %.3f", newAdvantage);
 				bestAdvantage = newAdvantage;
-				bestCord1 = *tempcoord1;
-				bestCord2 = *tempcoord2;
-				//bestCord1 = *coord1;
-				//bestCord2 = *coord2;
+				bestCord1 = *coord1;
+				bestCord2 = *coord2;
 			}
 		}
 		else{
@@ -76,10 +71,8 @@ negaMax(int depth, float score, bool isBlack, Boardstate bs, Coord *coord1, Coor
 		
 	}
 	
-	//*coord1 = bestCord1;
-	//*coord2 = bestCord2;
-	*tempcoord1 = bestCord1;
-	*tempcoord2 = bestCord2;	
+	*coord1 = bestCord1;
+	*coord2 = bestCord2;
 	
 	Boardstate newerbs = *newbs;
 	free(newbs);
