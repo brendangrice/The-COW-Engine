@@ -216,3 +216,4 @@ kingAttackVectors(Coord pos)
 
 	return vector;
 }
+
