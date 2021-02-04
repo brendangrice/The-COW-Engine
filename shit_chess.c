@@ -5,8 +5,22 @@
 // alongside all the other pieces and movements with one or.
 // REMEMBER TO CHECK ALL THE FREE'S
 ////
+                                  
 
 Boardstate currBoard;
+char* history[1024];
+int step = 0;
+const char* SQUARE_ID[64] = {
+  "h1 ", "g1 ", "f1 ", "e1 ", "d1 ", "c1 ", "b1 ", "a1 ",
+  "h2 ", "g2 ", "f2 ", "e2 ", "d2 ", "c2 ", "b2 ", "a2 ",
+  "h3 ", "g3 ", "f3 ", "e3 ", "d3 ", "c3 ", "b3 ", "a3 ",
+  "h4 ", "g4 ", "f4 ", "e4 ", "d4 ", "c4 ", "b4 ", "a4 ",
+  "h5 ", "g5 ", "f5 ", "e5 ", "d5 ", "c5 ", "b5 ", "a5 ",
+  "h6 ", "g6 ", "f6 ", "e6 ", "d6 ", "c6 ", "b6 ", "a6 ",
+  "h7 ", "g7 ", "f7 ", "e7 ", "d7 ", "c7 ", "b7 ", "a7 ",
+  "h8 ", "g8 ", "f8 ", "e8 ", "d8 ", "c8 ", "b8 ", "a8 "
+}; 
+
 
 void
 setBitBoard()
@@ -33,42 +47,31 @@ setBitBoard()
 int 
 main() 
 {
-	while (1) {
 	setBitBoard();
-	puts("Select your gamemode.");
-	puts("Local multiplayer: 1");
-	puts("Quit: q");
-	
-	char c = getc(stdin);
-
-		switch(c) {
-			case('1'):
-				localMultiplayer();
-				break;
-
-			case('q'):
-				return 0;
-				break;
-			case('Q'):
-				return 0;
-				break;
-		}
-	}
-}
-
-void
-localMultiplayer()
-{
 	puts("White to play");
 	printBoard(currBoard.bitboard, false);
 	// user input
 	// every time the user inputs a new move the attack vectors need to be reevaluated.
 	bool blackplaying = false;
 	bool test;
+	//float advantage;
 	U8 from, to;
 	for(;;) { // strange things are happening 
 LOOP: // works ok to me
-		test = parseInput(&from, &to);
+
+
+		// print the current advantage
+		//advantage = calculateAdvantage(currBoard.bitboard);
+		printf("\nAdvantage = %.3f\n", calculateAdvantage(currBoard));
+		
+		if(!blackplaying)
+		{
+			test = parseInput(&from, &to);
+		}
+		else{
+			test = negaMax(9, calculateAdvantage(currBoard), true, currBoard, &from, &to);
+		}
+		
 		if (!test) goto LOOP;
 		test = movePiece(from, to, blackplaying);
 		if (!test) goto LOOP;
@@ -77,7 +80,7 @@ LOOP: // works ok to me
 
 		printBoard(currBoard.bitboard, blackplaying);
 	}
-	return;
+	return(0);
 }
 
 char 
@@ -166,7 +169,7 @@ debugPrintBoard(Board b) {
 	}
 	puts("");
 }
-
+//#endif
 void 
 printBits(U8 byte) // used in debugging
 {
@@ -228,6 +231,38 @@ parseInput(Coord *coord1, Coord *coord2)
 	return true;
 }
 
+void
+generatePGN(Coord square, bool isBlack)
+{
+	
+	char str[10];
+	
+	if(!isBlack)
+	{
+		++step;
+		sprintf(str, "%d", step);
+		strcat(str, ". ");
+		strcat(history, str);
+	}
+	// what piece is this
+	
+	strcat(history, SQUARE_ID[square]);
+	printf("\n%s", history);
+	
+	/*
+	const char* move[8];
+	//const char* step = "X. ";
+	if(!isBlack)
+	{
+		const char* step = "X. ";
+		strcpy(move, step);
+	}
+	strcpy(move, SQUARE_ID[square]);
+	strcpy(history, move);
+	printf("\n%s", history);
+	*/
+}
+
 bool 
 movePiece(Coord from, Coord to, bool moveblack) 
 {
@@ -242,6 +277,8 @@ movePiece(Coord from, Coord to, bool moveblack)
 
 	free(newbs->bitboard);
 	free(newbs);
+	generatePGN(to, moveblack);
+	
 	return true;
 }
 
