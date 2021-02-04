@@ -1,5 +1,5 @@
 OBJS		= shit_chess.o moves.o
-CFLAGS		= -O3 -Wall
+CFLAGS		= -g -Wall
 
 
 chess :		$(OBJS)
