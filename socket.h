@@ -17,9 +17,8 @@ typedef struct {
 } sas; 
 
 bool serverConnect(char *domain, char *port, sas *socketinfo);
-bool getPlayer(sas socketinfo, char *player);
-bool receiveInput(sas socketinfo, char player, char *msg, U8 msglen);
-bool sendOutput(sas socketinfo, char *msg, U8 msglen);
+bool receiveInput(sas *socketinfo, char *msg, U8 msglen);
+bool sendOutput(sas *socketinfo, char *msg, U8 msglen);
 
 
 #endif

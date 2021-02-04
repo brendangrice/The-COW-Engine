@@ -14,7 +14,7 @@ serverConnect(char *domain, char *port, sas *socketinfo)
 	struct sockaddr_in server;
 	
 	if ( (he = gethostbyname( domain ) ) == NULL ) {
-		perror("Error getting hostname");
+		puts("Error getting hostname");
 		return false;
 	}
 	
@@ -40,29 +40,25 @@ serverConnect(char *domain, char *port, sas *socketinfo)
 	return true;
 }
 
-bool 
-getPlayer(sas socketinfo, char *player)
+bool
+receiveInput(sas *socketinfo, char *msg, U8 msglen)
 {
-	int socket_desc = socketinfo.socket_desc;
-	if(recv(socket_desc, player, 1, 0)<0) SOCKETERRORRET("Receive fault", socketinfo.socket_desc);
+	if(recv(socketinfo->socket_desc, msg, msglen, 0)<0) 
+		SOCKETERRORRET("Server closed connection", socketinfo->socket_desc);
+
+	if (strlen(msg) == 0) SOCKETERRORRET("Bad server input", socketinfo->socket_desc);
+
+	if (msglen > 1) msg[msglen] = '\0';
 
 	return true;
 }
 
 bool
-receiveInput(sas socketinfo, char player, char *msg, U8 msglen)
+sendOutput(sas *socketinfo, char *msg, U8 msglen)
 {
-	recv(socketinfo.socket_desc, msg, msglen, 0);
-	if (strlen(msg) == 0) SOCKETERRORRET("Server closed connection", socketinfo.socket_desc);
-	
-	return true;
-}
-
-bool
-sendOutput(sas socketinfo, char *msg, U8 msglen)
-{
-	if (send(socketinfo.socket_desc , msg , msglen , 0) < 0)
-	       	SOCKETERRORRET("Error sending", socketinfo.socket_desc);
+	if (msglen > 1) isg[msglen] = '\0';
+	if (send(socketinfo->socket_desc , msg , strlen(msg) , 0) < 0)
+	       	SOCKETERRORRET("Error sending", socketinfo->socket_desc);
 	
 	return true;
 }

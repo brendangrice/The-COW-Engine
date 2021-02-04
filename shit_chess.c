@@ -37,11 +37,11 @@ main()
 
 	while (1) {
 		char *cht = malloc(5);
-		puts("Local multiplayer: 1");
-		puts("Online multiplayer: 2");
-		puts("Quit: q");
+		fputs("\nLocal multiplayer: 1\n", stdout);
+		fputs("Online multiplayer: 2\n", stdout);
+		fputs("Quit: q\n", stdout);
 REPEATGAMEMODEINPUT:
-		fgets(cht, 5, stdin);
+		fgets(cht, 4, stdin);
 
 		switch(*cht) {
 			case('1'):
@@ -72,14 +72,10 @@ localMultiplayer()
 	// user input
 	// every time the user inputs a new move the attack vectors need to be reevaluated.
 	bool blackplaying = false;
-	bool test;
-	U8 from, to;
+	Coord from, to;
 	for(;;) { // strange things are happening 
-LOOP: // works ok to me
-		test = parseInput(&from, &to);
-		if (!test) goto LOOP;
-		test = movePiece(from, to, blackplaying);
-		if (!test) goto LOOP;
+		//replace with do while
+		while(!parseInput(&from, &to) || !movePiece(from, to, blackplaying)); // split for special interrupts on inputs/parseInput needs to be redone
 		blackplaying=!blackplaying; // switch players
 		blackplaying?puts("\nBlack to play"):puts("\nWhite to play");
 
@@ -110,10 +106,61 @@ onlineMultiplayer()
 	}
 	
 	sas *servcon = malloc(sizeof(sas));
+	fputs("Attempting to connect...\n", stdout);
 	bool test = serverConnect(domain, port, servcon);
+	if (!test) {
+		return;
+	}
+	char serverreplyplayer;
+	Coord serverIO[3];
+	bool player; //  white is false, black is true
+	fputs("Querying...\n", stdout);
+	receiveInput(servcon, &serverreplyplayer, 1);
+	if (serverreplyplayer == 'W') {
+		fputs("You are player White, waiting for player Black.\n", stdout);
+		char ok;
+		receiveInput(servcon, &ok, 1);
+		if (ok != 'S') {
+			// Bad input cleanup
+			fputs("Bad input 1", stdout);
+		} 
+		fputs("Player Black connected, game starting.\n", stdout);
+		// set up logic for being player white
+		player = false;
+		fputs("\nYour turn to play: \n", stdout);
+		printBoard(currBoard.bitboard, player);
+		//send info
+		while(!parseInput(serverIO, serverIO+1) || !movePiece(serverIO[0], serverIO[1], player));	// split for special interrupts on inputs/parseInput needs to be redone
+		printBoard(currBoard.bitboard, player);
+		sendOutput(servcon, (char *) &serverIO, 2);
+	} else if(serverreplyplayer == 'B') {
+		fputs("You are player Black.\n", stdout);
+		// set up logic for being player black
+		player = true;
+		printBoard(currBoard.bitboard, player);
+	} else {
+		fputs("Bad input 2", stdout);
+		// Bad input cleanup
+	}
 
-	printf("Connected? %d\n", test);
+	// forever
+	// recv info
+	// printBoard
+	// send info
+	// when game is mate or opponent concedes (not implemented yet) or draws (not implemented) or mate end
 
+	for(;;) {
+		// add error handling
+		if (!receiveInput(servcon, (char *) &serverIO, 2)) break;
+		movePiece(serverIO[0], serverIO[1], !player);
+		fputs("Your turn to play: \n", stdout);
+		printBoard(currBoard.bitboard, player);
+		while(!parseInput(serverIO, serverIO+1) || !movePiece(serverIO[0], serverIO[1], player)); // split for special interrupts on inputs/parseInput needs to be redone
+		printBoard(currBoard.bitboard, player);
+		if (!sendOutput(servcon, (char *) &serverIO, 2)) break;
+	}
+
+	fputs("Connection lost...\n", stdout);
 	return;
 }
 
