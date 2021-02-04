@@ -1,5 +1,5 @@
 #include "eval.h"
-#include "shit_chess.h"
+#include "main.h"
 
 int numberOfBits(Board b)
 {

@@ -1,5 +1,5 @@
 #include "types.h"
-#include "shit_chess.h"
+#include "main.h"
 
 #ifndef EVAL_H
 #define EVAL_H

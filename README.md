@@ -1,4 +1,6 @@
-# shit_chess.c
+# The COW Engine
+or Chess of Wisdom
+ 
 Simple CLI-Chess engine
 
 Run make to build

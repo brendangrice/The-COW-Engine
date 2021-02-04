@@ -1,6 +1,6 @@
 #include "types.h"
 #include "eval.h"
-#include "shit_chess.h"
+#include "main.h"
 
 #ifndef AI_H
 #define AI_H

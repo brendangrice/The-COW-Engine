@@ -1,4 +1,4 @@
-#include "shit_chess.h"
+#include "main.h"
 
 ////
 // Maybe just update total at the end of each move instead of updating it 
