@@ -67,6 +67,7 @@ REPEATGAMEMODEINPUT:
 void
 localMultiplayer()
 {
+	setBitBoard();
 	puts("White to play");
 	printBoard(currBoard.bitboard, false);
 	// user input
@@ -87,6 +88,7 @@ localMultiplayer()
 void
 onlineMultiplayer()
 {
+	setBitBoard();
 	//add something to handle ip
 	char *domainandport = malloc(30);
 	char *domain = malloc(20);

@@ -43,10 +43,10 @@ serverConnect(char *domain, char *port, sas *socketinfo)
 bool
 receiveInput(sas *socketinfo, char *msg, U8 msglen)
 {
-	if(recv(socketinfo->socket_desc, msg, msglen, 0)<0) 
-		SOCKETERRORRET("Server closed connection", socketinfo->socket_desc);
+	if(recv(socketinfo->socket_desc, msg, msglen, 0)<=0) 
+		SOCKETERRORRET("Connection closed", socketinfo->socket_desc);
 
-	if (strlen(msg) == 0) SOCKETERRORRET("Bad server input", socketinfo->socket_desc);
+	if (strlen(msg) == 0) SOCKETERRORRET("Bad input", socketinfo->socket_desc);
 
 	if (msglen > 1) msg[msglen] = '\0';
 
@@ -56,7 +56,7 @@ receiveInput(sas *socketinfo, char *msg, U8 msglen)
 bool
 sendOutput(sas *socketinfo, char *msg, U8 msglen)
 {
-	if (msglen > 1) isg[msglen] = '\0';
+	if (msglen > 1) msg[msglen] = '\0';
 	if (send(socketinfo->socket_desc , msg , strlen(msg) , 0) < 0)
 	       	SOCKETERRORRET("Error sending", socketinfo->socket_desc);
 	
