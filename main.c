@@ -42,6 +42,7 @@ main()
 		fputs("Quit: q\n", stdout);
 REPEATGAMEMODEINPUT:
 		fgets(cht, 4, stdin);
+		fflush(stdout);
 
 		switch(*cht) {
 			case('1'):
@@ -92,9 +93,12 @@ onlineMultiplayer()
 	//add something to handle ip
 	char *domainandport = malloc(30);
 	char *domain = malloc(20);
+	memset(domain, 0, 20);
 	char *port = malloc(10);
+	memset(port, 0, 20);
 	fputs("Enter the domain address you want to connect to: ", stdout);
 	fgets(domainandport, 30, stdin);
+	fflush(stdout);
 	domainandport[strlen(domainandport)-1] = '\0'; // remove \n
 	char *portpos = strchr(domainandport, ':');
 	if (portpos==NULL) {
@@ -161,6 +165,7 @@ onlineMultiplayer()
 		printBoard(currBoard.bitboard, player);
 		if (!sendOutput(servcon, (char *) &serverIO, 2)) break;
 	}
+	free(servcon);
 
 	fputs("Connection lost...\n", stdout);
 	return;
