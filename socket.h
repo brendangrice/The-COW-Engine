@@ -16,20 +16,20 @@
 #ifndef SOCKET_H
 #define SOCKET_H
 
-#ifdef _WIN32 // Windows includes
+#ifdef _WIN32 
 
 #ifndef WIN32_LEAN_AND_MEAN // reduces overhead
 #define WIN32_LEAN_AND_MEAN
 #endif
 
-#include <windows.h>
+#include <windows.h> // Windows includes
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <iphlpapi.h>
 #endif
 
 typedef struct {
-	int socket_desc; // how large is socket_desc? U8/U16??? -> test on windows
+	U64 socket_desc; // llu on windows
 	struct sockaddr_in server;
 } sas; 
 

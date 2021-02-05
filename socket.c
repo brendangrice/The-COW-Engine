@@ -1,5 +1,6 @@
 #include "socket.h"
 
+
 #ifndef _WIN32
 
 #define SOCKETERRORRET(A, B) {perror(A); close(B); return false;}
@@ -65,8 +66,8 @@ sendOutput(sas *socketinfo, char *msg, U8 msglen)
 
 #endif
 
-#ifdef _WIN32
 
+#ifdef _WIN32
 
 #define SOCKETERRORRET(A, B) {perror(A); closesocket(B); WSACleanup(); return false;}
 
