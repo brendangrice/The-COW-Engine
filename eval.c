@@ -279,10 +279,10 @@ calculateMaterialAdvantage(Boardstate state)
     int whiteKings = totalKings-blackKings;
 
 	// white score
-    int whiteMaterial = whitePawns + (whiteKnights * 3) + (whiteBishops * 3) + (whiteRooks * 5) + (whiteQueens * 9);
+    int whiteMaterial = whitePawns + (whiteKnights * 3) + (whiteBishops * 3) + (whiteRooks * 5) + (whiteQueens * 9) + (whiteKings * 100);
 
     // black score
-    int blackMaterial = blackPawns + (blackKnights * 3) + (blackBishops * 3) + (blackRooks * 5) + (blackQueens * 9);
+    int blackMaterial = blackPawns + (blackKnights * 3) + (blackBishops * 3) + (blackRooks * 5) + (blackQueens * 9) + (blackKings * 100);
 
 	int materialScore = whiteMaterial - blackMaterial;
 	/*
