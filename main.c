@@ -339,9 +339,9 @@ PROMOTION:
 					bitboard[total]|=p<<4;
 					break;
 				case(3):
-					bitboard[rook]^=0;
+					bitboard[rook]^=1;
 					bitboard[rook]|=p<<2;
-					bitboard[total]^=0;
+					bitboard[total]^=1;
 					bitboard[total]|=p<<2;
 					break;
 				case(4): // need to update black bitboard too

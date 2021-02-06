@@ -5,10 +5,10 @@ CFLAGS		= -g -Wall
 chess :		$(OBJS)
 	$(CC) -o chess $(OBJS)
 
-moves.o :	moves.h
+moves.o :	moves.h types.h
 
 main.o :	main.h types.h
 
 
 clean :
-		rm $(OBJS) chess
+		-rm -f $(OBJS) chess
