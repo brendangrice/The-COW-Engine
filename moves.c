@@ -3,7 +3,7 @@
 bool 
 whitePawnMovement(Coord from, Coord to, Boardstate bs)
 {
-	U64 p = 1LL;;
+	U64 p = 1ULL;;
 
 	if (bs.movementflags&7 && (from>>3)==4 && ((to-9==from)|(to-7==from)) && to==40+(bs.movementflags&0x7)) return 2;
 
@@ -21,7 +21,7 @@ whitePawnMovement(Coord from, Coord to, Boardstate bs)
 bool 
 blackPawnMovement(Coord from, Coord to, Boardstate bs) 
 {
-	U64 p = 1LL;
+	U64 p = 1ULL;
 
 	if (bs.movementflags&7 && (from>>3)==3 && ((from-9==to)|(from-7==to)) && to==16+(bs.movementflags&0x7)) return 2; // en passant
 
@@ -39,25 +39,25 @@ blackPawnMovement(Coord from, Coord to, Boardstate bs)
 bool 
 rookMovement(Coord from, Coord to, Board *bitboard) //can move to wherever it can attack
 {
-	return (rookAttackVectors(from, bitboard)&1LL<<to)>>to;
+	return (rookAttackVectors(from, bitboard)&1ULL<<to)>>to;
 }
 
 bool 
 knightMovement(Coord from, Coord to) //can move to wherever it can attack
 {
-	return (knightAttackVectors(from)&1LL<<to)>>to;
+	return (knightAttackVectors(from)&1ULL<<to)>>to;
 }
 
 bool 
 bishopMovement(Coord from, Coord to, Board *bitboard) //can move to wherever it can attack
 {
-	return (bishopAttackVectors(from, bitboard)&1LL<<to)>>to;
+	return (bishopAttackVectors(from, bitboard)&1ULL<<to)>>to;
 }
 
 bool 
 queenMovement(Coord from, Coord to, Board *bitboard) //can move to wherever it can attack
 {
-	return (queenAttackVectors(from, bitboard)&1LL<<to)>>to;
+	return (queenAttackVectors(from, bitboard)&1ULL<<to)>>to;
 }
 
 bool 
@@ -87,14 +87,14 @@ kingMovement(Coord from, Coord to, Boardstate bs) //can move to wherever it can 
 		// Check squares are empty and not threatened
 		if (!(bs.bitboard[total]&l3)&&!(whiteattack&l4)) return 5;
 
-	return (kingAttackVectors(from)&1LL<<to)>>to;
+	return (kingAttackVectors(from)&1ULL<<to)>>to;
 }
 
 Board 
 whitePawnAttackVectors(Coord pos) // pawns can attack diagonally
 {
 	U64 vector = 0;
-	U64 p = 1LL;
+	U64 p = 1ULL;
 	p<<=8+pos; // forward one square
 	if (pos%8 != 0) vector ^= p>>1; // left
 	if (pos%8 != 7) vector ^= p<<1; // right
@@ -105,7 +105,7 @@ Board
 blackPawnAttackVectors(Coord pos) // pawns can attack diagonally
 {
 	U64 vector = 0;
-	U64 p = 1LL;
+	U64 p = 1ULL;
 	p<<=pos-8; // back one square
 	if (pos%8 != 0) vector ^= p>>1;
 	if (pos%8 != 7) vector ^= p<<1;
@@ -119,7 +119,7 @@ rookAttackVectors(Coord pos, Board *bitboard) // makes 4 boards and puts them to
 	Board vector2 = 0;
 	Board vector3 = 0;
 	Board vector4 = 0;
-	U64 p = 1LL;
+	U64 p = 1ULL;
 	for (int i = pos+8; i < 64; i+=8) {
 		vector1 |= p<<i; //NE 
 		if (vector1&bitboard[total]) break; // stops when there's something in the way
@@ -143,7 +143,7 @@ Board
 knightAttackVectors(Coord pos)
 {
 	Board vector = 0;
-	U64 p = 1LL;
+	U64 p = 1ULL;
 	U8 ldist = 7-(pos%8);
 	U8 rdist = pos%8;
 	U8 tdist = 7-(pos>>3);
@@ -166,7 +166,7 @@ bishopAttackVectors(Coord pos, Board *bitboard) // make 4 boards and puts them t
 	Board vector2 = 0;
 	Board vector3 = 0;
 	Board vector4 = 0;
-	U64 p = 1LL;
+	U64 p = 1ULL;
 	for (int i = pos+7; i < 64 && i%8!=7; i+=7) {
 		vector1 |= p<<i; //NE 
 		if (vector1&bitboard[total]) break; //stops when there's something in the way
@@ -196,7 +196,7 @@ Board
 kingAttackVectors(Coord pos)
 {
 	U64 vector = 0;
-	U64 p = 1LL;
+	U64 p = 1ULL;
 	U8 ldist = 7-(pos%8);
 	U8 rdist = pos%8;
 	U8 tdist = 7-(pos>>3);

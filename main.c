@@ -171,10 +171,14 @@ onlineMultiplayer()
 	return;
 }
 
+//add something here for not having to take piece or black
 char 
 findPiece(Coord pos, U8 *piece, bool *colourblack, Board *bitboard) //returns a char representation of a piece for printing. A number as per the enum and a boolean on the colour of the piece.
 {
-	U64 p = 1LL;
+	U8 *extra = malloc(1);
+	if (piece == NULL) piece = extra;
+	if (colourblack == NULL) colourblack = (bool *) extra;
+	U64 p = 1ULL;
 	char out = 'A'; // temp for checking for errors
 	*colourblack = false;
 	U64 bit = bitboard[total]&(p<<pos); // gets whatever piece is at the location
@@ -211,6 +215,7 @@ findPiece(Coord pos, U8 *piece, bool *colourblack, Board *bitboard) //returns a 
 		*piece=nopiece; 
 		out = '.';	
 	}
+	free(extra);
 	return out;
 }
 
@@ -219,10 +224,8 @@ calculateAttackVectors(Board *bitboard, bool black) //returns an attack vector f
 {
 	char piece;
 	Board vector = 0;
-	U8 a; // unused
-	bool b; // unused
 	for (int i = 0; i < 64; i++) {
-		if ((piece=findPiece(i, &a, &b, bitboard))!='.') { // find every piece that isn't a blank piece
+		if ((piece=findPiece(i, NULL, NULL, bitboard))!='.') { // find every piece that isn't a blank piece
 			if ((piece == 'P') & (!black)) vector |= whitePawnAttackVectors(i); // white and black have different attacks
 			if ((piece == 'p') & black) vector |= blackPawnAttackVectors(i);
 			piece-=32*black; //if the piece is black subtract so that the char goes into the switch cases nicely
@@ -272,8 +275,6 @@ printBits(U8 byte) // used in debugging
 void
 printBoard(Board *bitboard, bool printblack)
 {
-	U8 a; // unused
-	bool a2; // unused
 	if (printblack) { // print the board upside-down
 		for (int i = 0; i < 64; i++) {
 			if (!(i%8))  { 
@@ -281,7 +282,7 @@ printBoard(Board *bitboard, bool printblack)
 				putchar('1'+(i/8));
 				putchar(' ');
 			}
-			putchar(findPiece(i, &a, &a2, bitboard));
+			putchar(findPiece(i, NULL, NULL, bitboard));
 		}
 		puts("\n\n% HGFEDCBA\n");
 	} else {
@@ -291,7 +292,7 @@ printBoard(Board *bitboard, bool printblack)
 				putchar('8'-(i/8));
 				putchar(' ');
 			}
-			putchar(findPiece(63-i, &a, &a2, bitboard));
+			putchar(findPiece(63-i, NULL, NULL, bitboard));
 		}
 		puts("\n\n% ABCDEFGH\n");
 	}
@@ -345,7 +346,7 @@ fauxMove(Coord from, Coord to, bool moveblack, Boardstate bs, Boardstate *nbs)
 	Board *bitboard = malloc(BITBOARDSIZE);
 	memcpy(bitboard, bs.bitboard, BITBOARDSIZE);
 	
-	U64 p = 1LL;;
+	U64 p = 1ULL;;
 	bool test = false;
 	
 	Coord frompiece;
@@ -429,9 +430,9 @@ PROMOTION:
 					bitboard[total]|=p<<4;
 					break;
 				case(3):
-					bitboard[rook]^=0;
+					bitboard[rook]^=1;
 					bitboard[rook]|=p<<2;
-					bitboard[total]^=0;
+					bitboard[total]^=1;
 					bitboard[total]|=p<<2;
 					break;
 				case(4): // need to update black bitboard too
