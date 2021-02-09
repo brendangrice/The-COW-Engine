@@ -2,6 +2,97 @@
 #include "main.h"
 #include "ai.h"
 
+// Stack of moveable pieces array based - Does not reduce in size
+/*
+struct Stack {
+	int top;
+	unsigned size;
+	int* array;
+};
+struct Stack* createStack(unsigned size)
+{
+	struct Stack* stack = (struct Stack*)malloc(sizeof(struct Stack));
+	stack->size = size;
+	stack->top = -1;
+	stack->array = (int*)malloc(stack->size * sizeof(int));
+	return stack;
+}
+bool isEmpty(struct Stack* stack)
+{
+	return stack->top==-1;
+}
+bool isFull(struct Stack* stack)
+{
+	return stack->top==stack->size-1;
+}
+void push(struct Stack* stack, int item)
+{
+	if(isFull(stack)) return;
+	stack->array[++stack->top] = item;
+	printf("%d pushed to stack\n", item);
+}
+int pop(struct Stack* stack)
+{
+	if(isEmpty(stack)) return INT_MIN;
+	return stack->array[stack->top--];
+}
+int peek(struct Stack* stack)
+{
+	if(isEmpty(stack)) return INT_MIN;
+	return stack->array[stack->top];
+}
+
+*/
+
+// Stack of linked lists
+struct MoveStack{
+	U8 data;
+	struct MoveStack* next;
+};
+struct MoveStack* createNode(U8 data)
+{
+	struct MoveStack* moveStack = 
+	(struct MoveStack*)malloc(sizeof(struct MoveStack));
+	moveStack->data = data;
+	moveStack->next = NULL;
+	return moveStack;
+}
+bool isEmpty(struct MoveStack* root)
+{
+	return !root;
+}
+void push(struct MoveStack** root, U8 data)
+{
+	struct MoveStack* moveStack = createNode(data);
+	moveStack->next = *root;
+	*root = moveStack;
+}
+int pop(struct MoveStack** root)
+{
+	if(isEmpty(*root)) return INT_MIN;
+	struct MoveStack* temp = *root;
+	*root = (*root)->next;
+	U8 popped = temp->data;
+	free(temp);
+	return popped;
+}
+int peek(struct MoveStack* root)
+{
+	if(isEmpty(root)) return INT_MIN;
+	return root->data;
+}
+
+int getSize(struct MoveStack* root)
+{
+	int size = 0;
+	while(root)
+	{
+		size++;
+		root = (root)->next;
+	}	
+	return size;
+}
+
 
 bool isMoveable(Boardstate bs, int position, char piece, bool isBlack)
 {
@@ -47,9 +138,9 @@ bool isMoveable(Boardstate bs, int position, char piece, bool isBlack)
 			//vectors |= (whitePawnAttackVectors(position)&(bs.bitboard[black]));
 			vectors |= (whitePawnAttackVectors(position));
 			vectors |= whitePawnMovement(position, position>>8, bs);
-			ownPieces = bs.bitboard[total]^bs.bitboard[black];
+			ownPieces = (bs.bitboard[total]^bs.bitboard[black]);
 		}
-		//excludeSelf = ((bs.bitboard[total])&1ULL<<position);
+		excludeSelf = ((bs.bitboard[total])&1ULL<<position);
 		
 		/*
 		return (
@@ -59,7 +150,6 @@ bool isMoveable(Boardstate bs, int position, char piece, bool isBlack)
 		);
 		*/
 	}
-	
 	
 	return (
 				(((vectors^ownPieces)^excludeSelf^ownPieces)
@@ -84,13 +174,13 @@ void debugPrintBoard(Board b) {
 	puts("");
 }
 
-bool moveablePieces(Boardstate bs, bool isBlack)
+struct MoveStack* moveablePieces(Boardstate bs, bool isBlack)
 {
-	Board b = bs.bitboard[black];
-	//printf("\nID = %llu", b);
-	//printBoard(b, isBlack);
+	Board b;
+	isBlack ? (b = bs.bitboard[black]) : (b = bs.bitboard[total] ^ bs.bitboard[black]);
+	isBlack ? (printf("\nPlaying as black\n")):(printf("\nPlaying as white\n"));
+	struct MoveStack* root = NULL;
 	
-	printf("\n[");
 	// print out all of ints that can be moved. 
 	for(int i = 0 ; i < 64; i++)
 	{
@@ -136,28 +226,54 @@ bool moveablePieces(Boardstate bs, bool isBlack)
 			
 			// now that we know where the from position is, and what type of piece it is, check if it can moved. 
 			
-			//printf("\n[");
-			if(isMoveable(bs, i, piece, isBlack))
-				printf("%d (%c), ",i ,piece);
-			//printf(" can this piece move ?, %d", isMoveable(bs, i, piece));
+			if(isMoveable(bs, i, piece, isBlack)){
+				push(&root, i);
+			}
 			
 		}
 	}
-	printf("]\n");
-	return true;
+	
+	return root;
 }
 
 bool
 negaMax(int depth, float score, bool isBlack, Boardstate bs, Coord *coord1, Coord *coord2)
 {
+	//while(!isEmpty(availablePieces))
+	//{
+	//	printf("\nPOP <%d>", pop(&availablePieces));
+	//}
+	
 	printf("\nCURRENT DEPTH = %d", depth);
 	printf("\nSCORE = %.3f", score);
-	//printBoard(bs.bitboard, isBlack);
+	printBoard(bs.bitboard, isBlack);
 	if(depth == 0)
-	{ 
+	{
+		//printf("\n\t\t##############################\n\t\tRETURNING MOVE %d %d", *coord1, *coord2);
 		return true;
 	}
+	
+	// get a stack of available pieces to move
+	struct MoveStack* availablePieces = moveablePieces(bs, isBlack);
+	//availablePieces = moveablePieces(bs, isBlack);
+	
+	U8 from [getSize(availablePieces)];
+	
+	int i = 0;
+	while(!isEmpty(availablePieces))
+	{
+		from[i++] = pop(&availablePieces);
+	}
+	free(availablePieces);
+	printf("printing out the array of from positions");
+	for(int j = 0 ; j < sizeof(from); j++)
+	{
+		printf("\n\t%d", from[j]);
+	}
+	
+	
 	int max = -99999;
+	int c = 0;
 	Coord bestCord1;
 	Coord bestCord2;
 	
@@ -183,6 +299,8 @@ negaMax(int depth, float score, bool isBlack, Boardstate bs, Coord *coord1, Coor
 	Boardstate *newbs = malloc(BOARDSTATESIZE);
 	////printf("\nNew board made successfully");
 	
+	
+	
 	while(attempts < 50)
 	{		
 		////printf("\n\tassign l1");
@@ -196,19 +314,21 @@ negaMax(int depth, float score, bool isBlack, Boardstate bs, Coord *coord1, Coor
 		
 		////printf("\n\t\tCoord1");
 		
-		*coord1 = 7 - l1 + 'A' + (n1-1)*8;
+		//*coord1 = 7 - l1 + 'A' + (n1-1)*8;
+		*coord1 = from[rand()%sizeof(from)];
+		
 		////printf("\n\t\tCoord2");
 		
 		*coord2 = 7 - l2 + 'A' + (n2-1)*8;
 		
-		
-		////printf("\nAttempting fauxMove");
+		//printf("\ncoord1 : %d & coord2 : %d", *coord1, *coord2);
+		c++;
 		if(fauxMove(*coord1, *coord2, isBlack, bs, newbs))
 		{
 			attempts++;
 			newAdvantage = calculateAdvantage(*newbs);
 			if(newAdvantage <= bestAdvantage){
-				//printf("\n\t\t\t ## New Best = %.3f", newAdvantage);
+				printf("\n\t\t\t ## New Best = %.3f", newAdvantage);
 				bestAdvantage = newAdvantage;
 				bestCord1 = *coord1;
 				bestCord2 = *coord2;
@@ -219,15 +339,15 @@ negaMax(int depth, float score, bool isBlack, Boardstate bs, Coord *coord1, Coor
 		}
 		
 	}
-	
+	printf("\nIterations: %d", c++);
 	*coord1 = bestCord1;
 	*coord2 = bestCord2;
 	
 	Boardstate newerbs = *newbs;
-	//newAdvantage = calculateAdvantage(*newbs);
+	
 	free(newbs);
-	//score = -negaMax(depth-1, score, !isBlack, newerbs, coord1, coord2);
-	//score = -negaMax(depth-1, score	, !isBlack, newerbs, coord1, coord2);
+	//free(from);
+	
 	if(score > max)
 	{
 		max = score;

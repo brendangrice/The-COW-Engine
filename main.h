@@ -33,7 +33,6 @@ enum { // all available 'pieces'
 	total,
 	nopiece,
 };
-  
 
 /*
  *

@@ -66,13 +66,20 @@ LOOP: // works ok to me
 		
 		if(!blackplaying)
 		{
+			printf("\a");
 			test = parseInput(&from, &to);
 		}
 		else{
 			//(int depth, float alpha, float beta, bool isBlack, Boardstate bs, Coord *coord1, Coord *coord2)
 			//test = alphaBetaNegaMax(3,0, 0, true, currBoard, &from, &to);
-			//moveablePieces(currBoard, blackplaying);
+			
+			//printf("is empty %d", isEmpty(temp));
+			//while(!isEmpty(temp))
+			//{
+			//	printf("pop %d ", pop(&temp));
+			//}
 			test = negaMax(3, calculateAdvantage(currBoard), true, currBoard, &from, &to);
+			
 		}
 		
 		if (!test) goto LOOP;
