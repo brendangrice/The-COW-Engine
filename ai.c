@@ -174,11 +174,217 @@ void debugPrintBoard(Board b) {
 	puts("");
 }
 
+struct MoveStack* possibleMoveToBroken(Boardstate bs, bool isBlack, struct MoveStack* from)
+{
+	printf("\n\t\t\t\t\t OK POSSIBLE");
+	Board fullBoard = bs.bitboard[total]; // state of entire game
+	printf("\n\t\t\t\t\t OK POSSIBLE");
+	Board self = 0;
+	//Board opponent;
+	Board b; // tempoary board to store where the piece is
+	Board vectors = 0; // vector board which will contain all possible moveable to squares
+	
+	isBlack?(self = bs.bitboard[black]) : (self = bs.bitboard[total] ^ bs.bitboard[black]);
+	
+	//!isBlack?(opponent = bs.bitboard[black]) : (opponent = bs.bitboard[total] ^ bs.bitboard[black]);
+	
+	isBlack ? (b = bs.bitboard[black]) : (b = bs.bitboard[total] ^ bs.bitboard[black]); // filter the board to either consider black or white pieces
+	//isBlack ? (printf("\nPlaying as black\n")):(printf("\nPlaying as white\n"));
+	struct MoveStack* root = NULL;
+	printf("\n\t\t\t\t\t OK POSSIBLE");
+	
+	// for each square
+	while(!isEmpty(from))
+	{
+		printf("\n\t\t\t\t\t\t OK POSSIBLE");
+		U8 i = pop(&from); // position of a piece that can be moved.
+		b = 1ULL<<i; // make a board that only has 1 bit to move set.
+		
+		if((b>>i)&1) // if the bit is set
+		{
+			char piece = 'A';	
+			// then check what type of piece it it
+			if((b&1ULL<<i)&(bs.bitboard[pawn])) // if it is a pawn
+			{
+				piece = 'P';
+				
+				if(isBlack)
+				{
+					if(blackPawnMovement(i, i-8, bs)) // can it move down one square
+					{
+						//printf("\n This pawn can move forward one space");
+						vectors |= (1ULL<<(i-8))^((1ULL<<(i-8))&self);
+					}
+					if(blackPawnMovement(i, i-16, bs)) // can it move down two square
+					{
+						//printf("\n This pawn can move forward two spaces");
+						vectors |= (1ULL<<(i-16))^((1ULL<<(i-16))&self);
+					}
+				}
+				else
+				{
+					if(whitePawnMovement(i, i+8, bs)) // can it move up one square
+					{
+						//printf("\n This pawn can move forward one space");
+						vectors |= (1ULL<<(i+8))^((1ULL<<(i+8))&self);
+					}
+					if(blackPawnMovement(i, i+16, bs)) // can it move up two square
+					{
+						//printf("\n This pawn can move forward two spaces");
+						vectors |= (1ULL<<(i+16))^((1ULL<<(i+16))&self);
+					}
+				}
+				
+				//attaqcks
+				isBlack ? ((vectors |= blackPawnAttackVectors(i))):(vectors |= whitePawnAttackVectors(i));
+				
+			}
+			else if((b&1ULL<<i)&(bs.bitboard[bishop])) // if it is a bishop
+			{
+				piece = 'B';
+				vectors |= bishopAttackVectors(i, fullBoard)^(bishopAttackVectors(i, fullBoard)&self);
+			}
+			else if((b&1ULL<<i)&(bs.bitboard[knight])) // if it is a knight
+			{
+				piece = 'N';
+				vectors |= knightAttackVectors(i)^(knightAttackVectors(i)&self);
+			}
+			else if((b&1ULL<<i)&(bs.bitboard[rook])) // if it is a rook
+			{
+				piece = 'R';
+				vectors |= (rookAttackVectors(i, fullBoard)^((rookAttackVectors(i, fullBoard)&self)));
+			}
+			else if((b&1ULL<<i)&(bs.bitboard[king])) // if it is a king
+			{
+				piece = 'K';
+				vectors |= kingAttackVectors(i)^(kingAttackVectors(i)&self);
+			}
+			else if((b&1ULL<<i)&(bs.bitboard[queen])) // if it is a queen
+			{
+				piece = 'Q';
+				vectors |= queenAttackVectors(i, fullBoard)^(queenAttackVectors(i, fullBoard)&self);
+			}
+			else{
+				printf("\n\t UNKNOWN PIECE");
+			}
+		}
+	}
+	printf("\nAll of the squares that can be moved to");
+	debugPrintBoard(vectors);
+	// pass these squares back 
+	for(int i = 0 ; i < 63; i++)
+	{
+		if((vectors>>i)&1)
+		{
+			push(&root, i);
+		}
+	}
+	free(from);
+	return root;
+}
+
+struct MoveStack* possibleMoveTo(Boardstate bs, bool isBlack, U8 *from, int size)
+{
+	struct MoveStack* root = NULL;
+	
+	Board fullBoard = bs.bitboard[total]; // state of entire game
+	
+	//debugPrintBoard(fullBoard);
+	Board self = 0ULL;
+	Board b = 0ULL; // tempoary board to store where the piece is
+	Board vectors = 0ULL; // vector board which will contain all possible moveable to squares
+	
+	isBlack?(self = bs.bitboard[black]) : (self = bs.bitboard[total] ^ bs.bitboard[black]);
+	
+	//!isBlack?(opponent = bs.bitboard[black]) : (opponent = bs.bitboard[total] ^ bs.bitboard[black]);
+	
+	isBlack ? (b = bs.bitboard[black]) : (b = bs.bitboard[total] ^ bs.bitboard[black]); // filter the board to either consider black or white pieces
+	//struct MoveStack* root = NULL;
+	
+	
+	// for each square
+	for(int j = 0; j < size; j++){
+		U8 i = from[j]; // position of a piece that can be moved.
+		b = 1ULL<<i; // make a board that only has 1 bit to move set.
+	
+		if((b>>i)&1) // if the bit is set
+		{
+			// then check what type of piece it it
+			if((b&1ULL<<i)&(bs.bitboard[pawn])) // if it is a pawn
+			{
+				if(isBlack)
+				{
+					if(blackPawnMovement(i, i-8, bs)) // can it move down one square
+					{
+						vectors |= (1ULL<<(i-8))^((1ULL<<(i-8))&self);
+					}
+					if(blackPawnMovement(i, i-16, bs)) // can it move down two square
+					{
+						vectors |= (1ULL<<(i-16))^((1ULL<<(i-16))&self);
+					}
+				}
+				else
+				{
+					if(whitePawnMovement(i, i+8, bs)) // can it move up one square
+					{
+						vectors |= (1ULL<<(i+8))^((1ULL<<(i+8))&self);
+					}
+					if(blackPawnMovement(i, i+16, bs)) // can it move up two square
+					{
+						vectors |= (1ULL<<(i+16))^((1ULL<<(i+16))&self);
+					}
+				}
+				
+				//attaqcks
+				isBlack ? ((vectors |= blackPawnAttackVectors(i))):(vectors |= whitePawnAttackVectors(i));
+				
+			}
+			else if((b&1ULL<<i)&(bs.bitboard[bishop])) // if it is a bishop
+			{
+				vectors |= bishopAttackVectors(i, bs.bitboard)^(bishopAttackVectors(i, bs.bitboard)&self);
+			}
+			else if((b&1ULL<<i)&(bs.bitboard[knight])) // if it is a knight
+			{
+				vectors |= knightAttackVectors(i)^(knightAttackVectors(i)&self);
+			}
+			else if((b&1ULL<<i)&(bs.bitboard[rook])) // if it is a rook
+			{
+				vectors |= (rookAttackVectors(i, bs.bitboard)^((rookAttackVectors(i, bs.bitboard)&self)));
+			}
+			else if((b&1ULL<<i)&(bs.bitboard[king])) // if it is a king
+			{
+				vectors |= kingAttackVectors(i)^(kingAttackVectors(i)&self);
+			}
+			else if((b&1ULL<<i)&(bs.bitboard[queen])) // if it is a queen
+			{
+				vectors |= queenAttackVectors(i, bs.bitboard)^(queenAttackVectors(i, bs.bitboard)&self);
+			}
+			else{
+				printf("\n\t UNKNOWN PIECE");
+			}
+		}
+	}
+	//printf("\nAll of the squares that can be moved to");
+	//debugPrintBoard(vectors);
+	// pass these squares back 
+	for(int i = 0 ; i < 64; i++)
+	{
+		if((vectors>>i)&1)
+		{
+			push(&root, i);
+		}
+	}
+	
+	//debugPrintBoard(vectors);
+	return root;
+}
+
+
 struct MoveStack* moveablePieces(Boardstate bs, bool isBlack)
 {
 	Board b;
 	isBlack ? (b = bs.bitboard[black]) : (b = bs.bitboard[total] ^ bs.bitboard[black]);
-	isBlack ? (printf("\nPlaying as black\n")):(printf("\nPlaying as white\n"));
+	//isBlack ? (printf("\nPlaying as black\n")):(printf("\nPlaying as white\n"));
 	struct MoveStack* root = NULL;
 	
 	// print out all of ints that can be moved. 
@@ -232,7 +438,6 @@ struct MoveStack* moveablePieces(Boardstate bs, bool isBlack)
 			
 		}
 	}
-	
 	return root;
 }
 
@@ -243,33 +448,69 @@ negaMax(int depth, float score, bool isBlack, Boardstate bs, Coord *coord1, Coor
 	//{
 	//	printf("\nPOP <%d>", pop(&availablePieces));
 	//}
-	
 	printf("\nCURRENT DEPTH = %d", depth);
 	printf("\nSCORE = %.3f", score);
 	printBoard(bs.bitboard, isBlack);
 	if(depth == 0)
 	{
-		//printf("\n\t\t##############################\n\t\tRETURNING MOVE %d %d", *coord1, *coord2);
 		return true;
 	}
 	
 	// get a stack of available pieces to move
 	struct MoveStack* availablePieces = moveablePieces(bs, isBlack);
-	//availablePieces = moveablePieces(bs, isBlack);
 	
+	// array that will hold the squares that can be moved from
 	U8 from [getSize(availablePieces)];
 	
 	int i = 0;
+	// while from pieces exist assign to from array
 	while(!isEmpty(availablePieces))
 	{
 		from[i++] = pop(&availablePieces);
 	}
-	free(availablePieces);
-	printf("printing out the array of from positions");
+
+	printf("\nprinting out the array of from positions = [");
 	for(int j = 0 ; j < sizeof(from); j++)
 	{
-		printf("\n\t%d", from[j]);
+		printf("%d ", from[j]);
 	}
+	printf("]\n");
+	
+	// free memory
+	free(availablePieces);
+	
+	
+	// get the squares that player can move to
+	
+	//struct MoveStack* toSquares = possibleMoveTo(bs, isBlack, &from);
+	//whatIsInThis(&from, sizeof(from)/sizeof(from[0]));
+	struct MoveStack* toSquares = possibleMoveTo(bs, isBlack, &from, sizeof(from));
+	
+	//printf("######%d", getSize(test));
+	// create array to store these squares that they can move to
+	U8 to [getSize(toSquares)];
+	
+	int x = 0;
+	// while there are squares that they can move to, assign to to array
+
+	
+	while(!isEmpty(toSquares))
+	{
+		//printf("\n poping ");
+		to[x++] = pop(&toSquares);
+	}
+	
+
+	printf("\nprinting out the array of to positions = [");
+	for(int j = 0 ; j < sizeof(to); j++)
+	{
+		printf("%d ", to[j]);
+	}
+	printf("]\n");
+	
+	free(toSquares);
+	
+	printf("\nShould be finished subsetting");
 	
 	
 	int max = -99999;
@@ -319,7 +560,8 @@ negaMax(int depth, float score, bool isBlack, Boardstate bs, Coord *coord1, Coor
 		
 		////printf("\n\t\tCoord2");
 		
-		*coord2 = 7 - l2 + 'A' + (n2-1)*8;
+		//*coord2 = 7 - l2 + 'A' + (n2-1)*8;
+		*coord2 = to[rand()%sizeof(to)];	
 		
 		//printf("\ncoord1 : %d & coord2 : %d", *coord1, *coord2);
 		c++;
