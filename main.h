@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifndef SHIT_CHESS_H
-#define SHIT_CHESS_H
+#ifndef MAIN_H
+#define MAIN_H
 
 #include "types.h"
 #include "moves.h"
@@ -54,6 +54,9 @@ bool parseInput(Coord *from, Coord *to); //reads input and gives from and to as 
 bool movePiece(Coord from, Coord to, bool moveblack); // returns true if the piece moved from [from] to [to], colour of the piece (players turn) needs to be given
 bool fauxMove(Coord from, Coord to, bool moveblack, Boardstate bs, Boardstate *nbs); // returns a board nbs as if the move had been executed, if its an illegal move the given Boardstate is returned.
 char findPiece(Coord pos, Coord *piece, bool *colourblack, Board *bitboard); //returns a char representation of a piece for printing. A number as per the enum and a boolean on the colour of the piece. takes coordinate (0-63)
+Coord btoc(Board b);
+bool inCheck(Board *bitboard, bool moveblack); // returns a boolean for whether or not the player is in check
+bool inCheckMate(Boardstate bitboard, bool moveblack); // returns a boolean for whether or not the player is mate'd
 
 #ifdef DEBUG
 void debugPrintBoard(Board b);
