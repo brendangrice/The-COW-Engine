@@ -78,7 +78,10 @@ LOOP: // works ok to me
 			//{
 			//	printf("pop %d ", pop(&temp));
 			//}
-			test = negaMax(3, calculateAdvantage(currBoard), true, currBoard, &from, &to);
+			test = calculateBestMove(currBoard, true, 3, &from, &to);
+			//return(0);
+			//ai_main(currBoard, 3, true, &fake, &anotherFake);
+			//test = negaMax(1, calculateAdvantage(currBoard), true, currBoard, &from, &to);
 			
 		}
 		
@@ -89,6 +92,7 @@ LOOP: // works ok to me
 		blackplaying?puts("\nBlack to play"):puts("\nWhite to play");
 
 		printBoard(currBoard.bitboard, blackplaying);
+		printf("\nAdvantage: %.3f", calculateAdvantage(currBoard));
 	}
 	return(0);
 }
@@ -296,7 +300,7 @@ bool
 fauxMove(Coord from, Coord to, bool moveblack, Boardstate bs, Boardstate *nbs)
 {
 	*nbs = bs;
-
+	
 	U8 movementflags = bs.movementflags;
 	Board *bitboard = malloc(BITBOARDSIZE);
 	memcpy(bitboard, bs.bitboard, BITBOARDSIZE);
