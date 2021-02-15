@@ -2,6 +2,7 @@
 #include "main.h"
 #include "ai.h"
 
+int iterations = 0;
 
 // tree 
 /*
@@ -370,6 +371,72 @@ Max(float a, float b)
 }
 
 float
+NegaMax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
+{
+	// base case
+	if(depth == 0) return calculateAdvantage(bs);
+	// recurive case
+	
+	int i, x, attempts;
+	
+	// get a stack of available pieces to move
+	struct MoveStack* availablePieces = moveablePieces(bs, isBlack);
+	U8 from [getSize(availablePieces)];
+	while(!isEmpty(availablePieces)) from[i++] = pop(&availablePieces);
+	free(availablePieces);
+	struct MoveStack* toSquares = possibleMoveTo(bs, isBlack, &from, sizeof(from));
+	U8 to [getSize(toSquares)];
+	while(!isEmpty(toSquares)) to[x++] = pop(&toSquares);
+	free(toSquares);
+		
+	float bestMove = -9999;
+
+	while(attempts < 100)
+	{
+		iterations++;
+		// make a move from selecting from random squares
+		Coord one = from[rand()%sizeof(from)]; // assign to square
+		Coord two = to[rand()%sizeof(to)];	  // assign from square
+		Boardstate newbs;
+			
+		if(fauxMove(one, two, isBlack, bs, &newbs))
+		{
+			attempts++;
+			/*
+			float value = -NegaMax(depth-1, newbs, !isBlack, alpha, beta);
+			if(value > bestMove)
+				bestMove = value;
+			if(bestMove > alpha)
+				alpha = bestMove;
+			if(bestMove >= beta)
+				return bestMove;
+			*/
+			
+			/*
+			float value = -NegaMax(depth-1, newbs, !isBlack, -b, -alpha);
+			if((value > alpha) && (value < beta))
+			{
+				value = -NegaMax(depth-1, newbs, !isBlack, -beta, -alpha);
+			}
+			alpha = Max(alpha, value);
+			if(alpha >= beta) return alpha;
+			b = alpha+1;
+			*/
+			
+			
+			bestMove = Max(bestMove, -NegaMax(depth-1, newbs, !isBlack, -beta, -alpha));
+			alpha = Max(alpha, bestMove);
+			if(beta <= alpha)
+			{
+				return alpha;
+			}
+			
+		}
+	}
+	return bestMove;
+}
+
+float
 minimax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 {	
 	if(depth == 0)
@@ -408,8 +475,9 @@ minimax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 	if(!isBlack) // is maximising
 	{
 		bestMove = -9999;
-		while(attempts < 50)
+		while(attempts < 100)
 		{
+			iterations++;
 			// make a move from selecting from random squares
 			Coord one = from[rand()%sizeof(from)]; // assign to square
 			Coord two = to[rand()%sizeof(to)];	  // assign from square
@@ -432,8 +500,9 @@ minimax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 	else // is minimizing
 	{
 		bestMove = 9999;
-		while(attempts < 50)
+		while(attempts < 100)
 		{
+			iterations++;
 			// make a move from selecting from random squares
 			Coord one = from[rand()%sizeof(from)]; // assign to square
 			Coord two = to[rand()%sizeof(to)];	  // assign from square
@@ -519,6 +588,7 @@ calculateBestMove(Boardstate bs, bool isBlack, int depth, Coord *coord1, Coord *
 			// check to see if this new board position is favorable 
 			//float newAdvantage = calculateAdvantage(newbs);
 			float newAdvantage = minimax(depth-1, newbs, !isBlack, -10000, 10000);
+			//float newAdvantage = -NegaMax(depth-1, newbs, !isBlack, -10000, 10000);
 			
 			if(newAdvantage > bestScore)
 			{
@@ -532,6 +602,7 @@ calculateBestMove(Boardstate bs, bool isBlack, int depth, Coord *coord1, Coord *
 		
 	}
 	printf("\nThe best move to make is (%d %d) @ %.3f", best1, best2, bestScore);
+	printf("\nIterarions = %d", iterations);
 	*coord1 = best1;
 	*coord2 = best2;
 }

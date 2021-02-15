@@ -1,5 +1,4 @@
 #include "main.h"
-
 ////
 // Maybe just update total at the end of each move instead of updating it 
 // alongside all the other pieces and movements with one or.
@@ -61,7 +60,6 @@ LOOP: // works ok to me
 		blackplaying?puts("\nBlack to play"):puts("\nWhite to play");
 
 		printBoard(currBoard.bitboard, blackplaying);
-		printf("\nAdvantage: %.3f", calculateAdvantage(currBoard));
 	}
 	return(0);
 }
