@@ -13,24 +13,24 @@
 
 // all the movements pieces can make
 
-// pawn can move one, can move two, can promote, can take
-bool whitePawnMovement(Coord from, Coord to, Boardstate bs);
-
-bool blackPawnMovement(Coord from, Coord to, Boardstate bs);
+// pawn can move one, can move two, can promote, can take maybe rename these from 'movement'
+// canWhitePawnMove?
+// returns 2 for en passant, 3 for double move, returns 1 for a regular valid move
+U8 whitePawnMovement(Coord from, Coord to, Boardstate bs, Board *vector);
+U8 blackPawnMovement(Coord from, Coord to, Boardstate bs, Board *vector);
 
 // all of these can move where they can attack
+// returns whether the piece can move 'from' to 'to'
+// vector is a board representing all the moves a piece can make from there, can be null
 
-bool rookMovement(Coord from, Coord to, Board *bitboard);
+bool rookMovement(Coord from, Coord to, Boardstate bs, Board *vector);
+bool knightMovement(Coord from, Coord to, Boardstate bs, Board *vector);
+bool bishopMovement(Coord from, Coord to, Boardstate bs, Board *vector);
+bool queenMovement(Coord from, Coord to, Boardstate bs, Board *vector);
 
-bool knightMovement(Coord from, Coord to);
+// king also can castle for more movement
 
-bool bishopMovement(Coord from, Coord to, Board *bitboard);
-
-bool queenMovement(Coord from, Coord to, Board *bitboard);
-
-// king also can castle
-
-bool kingMovement(Coord from, Coord to, Boardstate bs);
+U8 kingMovement(Coord from, Coord to, Boardstate bs, Board *vector);
 
 // all the different positions a piece can attack
 
