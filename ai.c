@@ -2,32 +2,6 @@
 #include "main.h"
 #include "ai.h"
 
-int iterations = 0;
-
-// tree 
-/*
-typedef struct Node{
-	struct Node *children; // array of childern nodes
-	Boardstate boardstate; // data of the node
-	float advantage;	   // advantage score of the bitboard
-} Tree;
-
-Tree *InsertTree(Boardstate bs, Tree *pointer, int numberOfChildern)
-{
-	if(pointer)
-	{
-		pointer = (Tree*)malloc(sizeof(Tree));
-		pointer -> boardstate = bs;
-		
-		for(int i = 0 ; i < numberOfChildern; i++)
-		{
-			pointer -> children[i] = pointer[i];
-			printf("\n%d %d", pointer, pointer->children);
-			//debugPrintBoard((pointer->childern[i]->boardstate).bitboard[total]);
-		}
-	}
-}
-*/
 struct Node
 {
 	Boardstate boardstate; // each node has a boardstate
@@ -61,14 +35,10 @@ void traverseTree(struct Node *root)
 	if(root == NULL) return;
 	while(root)
 	{
-		debugPrintBoard(root->boardstate.bitboard[total]);
-		printf("\t (id:%d) child = %d", root, root->next);
-		printf("\t Advantage = %.3f", root->advantage);
 		if(root->child) traverseTree(root->child);
 		root = root->next;
 	}
 }
-
 
 
 // Stack of linked lists
@@ -96,7 +66,7 @@ void push(struct MoveStack** root, U8 data)
 }
 int pop(struct MoveStack** root)
 {
-	if(isEmpty(*root)) return INT_MIN;
+	if(isEmpty(*root)) return -0;
 	struct MoveStack* temp = *root;
 	*root = (*root)->next;
 	U8 popped = temp->data;
@@ -105,7 +75,7 @@ int pop(struct MoveStack** root)
 }
 int peek(struct MoveStack* root)
 {
-	if(isEmpty(root)) return INT_MIN;
+	if(isEmpty(root)) return -0;
 	return root->data;
 }
 
@@ -206,7 +176,6 @@ possibleMoveTo(Boardstate bs, bool isBlack, U8 *from, int size)
 {
 	struct MoveStack* root = NULL;
 	
-	Board fullBoard = bs.bitboard[total]; // state of entire game
 	Board self = 0ULL;
 	Board b = 0ULL; // tempoary board to store where the piece is
 	Board vectors = 0ULL; // vector board which will contain all possible moveable to squares
@@ -377,14 +346,16 @@ NegaMax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 	if(depth == 0) return calculateAdvantage(bs);
 	// recurive case
 	
-	int i, x, attempts;
+	int i = 0;
+	int x = 0;
+	int attempts = 0;
 	
 	// get a stack of available pieces to move
 	struct MoveStack* availablePieces = moveablePieces(bs, isBlack);
 	U8 from [getSize(availablePieces)];
 	while(!isEmpty(availablePieces)) from[i++] = pop(&availablePieces);
 	free(availablePieces);
-	struct MoveStack* toSquares = possibleMoveTo(bs, isBlack, &from, sizeof(from));
+	struct MoveStack* toSquares = possibleMoveTo(bs, isBlack, from, sizeof(from));
 	U8 to [getSize(toSquares)];
 	while(!isEmpty(toSquares)) to[x++] = pop(&toSquares);
 	free(toSquares);
@@ -393,7 +364,6 @@ NegaMax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 
 	while(attempts < 100)
 	{
-		iterations++;
 		// make a move from selecting from random squares
 		Coord one = from[rand()%sizeof(from)]; // assign to square
 		Coord two = to[rand()%sizeof(to)];	  // assign from square
@@ -457,7 +427,7 @@ minimax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 	}
 	free(availablePieces);
 	// get the squares that player can move to
-	struct MoveStack* toSquares = possibleMoveTo(bs, isBlack, &from, sizeof(from));
+	struct MoveStack* toSquares = possibleMoveTo(bs, isBlack, from, sizeof(from));
 	U8 to [getSize(toSquares)]; // create array to store these squares that they can move to
 	int x = 0;
 	// while there are squares that they can move to, assign to to array
@@ -477,7 +447,6 @@ minimax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 		bestMove = -9999;
 		while(attempts < 100)
 		{
-			iterations++;
 			// make a move from selecting from random squares
 			Coord one = from[rand()%sizeof(from)]; // assign to square
 			Coord two = to[rand()%sizeof(to)];	  // assign from square
@@ -502,7 +471,6 @@ minimax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 		bestMove = 9999;
 		while(attempts < 100)
 		{
-			iterations++;
 			// make a move from selecting from random squares
 			Coord one = from[rand()%sizeof(from)]; // assign to square
 			Coord two = to[rand()%sizeof(to)];	  // assign from square
@@ -512,7 +480,7 @@ minimax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 			if(fauxMove(one, two, isBlack, bs, &newbs))
 			{
 				attempts++;
-				float newAdvantage = minimax(depth -1, newbs, !isBlack, alpha, beta);
+				//float newAdvantage = minimax(depth -1, newbs, !isBlack, alpha, beta);
 				bestMove = Min(bestMove, minimax(depth-1, newbs, !isBlack, alpha, beta));
 				beta = Min(beta, bestMove);
 				if(beta<=alpha)
@@ -525,7 +493,7 @@ minimax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 	return bestMove;
 }
 
-void
+bool
 calculateBestMove(Boardstate bs, bool isBlack, int depth, Coord *coord1, Coord *coord2)
 {
 	// get a stack of available pieces to move
@@ -546,7 +514,7 @@ calculateBestMove(Boardstate bs, bool isBlack, int depth, Coord *coord1, Coord *
 	// free memory
 	free(availablePieces);
 	// get the squares that player can move to
-	struct MoveStack* toSquares = possibleMoveTo(bs, isBlack, &from, sizeof(from));
+	struct MoveStack* toSquares = possibleMoveTo(bs, isBlack, from, sizeof(from));
 	U8 to [getSize(toSquares)]; // create array to store these squares that they can move to
 	int x = 0;
 	// while there are squares that they can move to, assign to to array
@@ -566,8 +534,8 @@ calculateBestMove(Boardstate bs, bool isBlack, int depth, Coord *coord1, Coord *
 	
 	
 	// store the best move that it can make
-	Coord best1; 
-	Coord best2;
+	Coord best1 = 'a'; 
+	Coord best2 = 'a';
 	// track the best score of the game
 	float bestScore = -9999.0;
 	int attempts = 0; // try for a number of successful moves that improve position
@@ -602,7 +570,7 @@ calculateBestMove(Boardstate bs, bool isBlack, int depth, Coord *coord1, Coord *
 		
 	}
 	printf("\nThe best move to make is (%d %d) @ %.3f", best1, best2, bestScore);
-	printf("\nIterarions = %d", iterations);
 	*coord1 = best1;
 	*coord2 = best2;
+	return true;
 }
