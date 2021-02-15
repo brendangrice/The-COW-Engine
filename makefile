@@ -1,5 +1,5 @@
 OBJS		= main.o moves.o
-CFLAGS		= -g -Wall
+CFLAGS		= -g -Wall -D DEBUG
 
 
 chess :		$(OBJS)
