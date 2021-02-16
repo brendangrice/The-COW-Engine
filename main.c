@@ -5,13 +5,13 @@
 // REMEMBER TO CHECK ALL THE FREE'S
 ////
                                   
-
 Boardstate currBoard;
 
 void
 setBitBoard()
 {
 	currBoard.movementflags=0xF0; // set castling to be available for both players
+	currBoard.blackplaying = false; // game starts with white
 	currBoard.bitboard = malloc(BITBOARDSIZE);
 
 	for (int i = 0; i < BITBOARDELEMENTS; i++) {
@@ -34,40 +34,151 @@ int
 main() 
 {
 	setBitBoard();
+
+	char c; // input
+	while (1) {
+
+	setBitBoard();
+	puts("Select your gamemode.");
+	puts("Local multiplayer: 1");
+	puts("Local AI: 2");
+	puts("Quit: q");
+	
+	scanf("%c", &c);
+
+		switch(c) {
+			case('1'):
+				localMultiplayer();
+				break;
+			case('2'):
+				localAI();
+				break;
+			case('q'):
+				return 0;
+				break;
+			case('Q'):
+				return 0;
+				break;
+		}
+	}
+}
+
+Boardstate *
+makeBoardstate(Board *bitboard, U8 movementflags, bool blackplaying)
+{
+	Boardstate *newbs = malloc(BOARDSTATESIZE);
+	newbs->bitboard = malloc(BITBOARDSIZE);
+	newbs->bitboard = memset(newbs->bitboard, 0, BITBOARDSIZE);
+	if (bitboard!=NULL) memcpy(newbs->bitboard, bitboard, BITBOARDSIZE);
+	newbs->movementflags = movementflags;
+	newbs->blackplaying = blackplaying;
+	
+	return newbs;
+}
+
+Boardstate *
+cpyBoardstate(Boardstate *to, Boardstate *from)
+{
+		to->bitboard = memcpy(to->bitboard, from->bitboard, BITBOARDSIZE);
+		to->movementflags = from->movementflags;
+		to->blackplaying = from->blackplaying;
+		return to;
+}
+
+void
+destroyBoardstate(Boardstate *bs)
+{
+	free(bs->bitboard);
+	bs->bitboard = NULL;
+	free(bs);
+	bs = NULL;
+}
+
+void
+localAI()
+{
 	puts("White to play");
-	printBoard(currBoard.bitboard, false);
+	printBoard(currBoard);
 	// user input
 	// every time the user inputs a new move the attack vectors need to be reevaluated.
-	bool blackplaying = false;
 	bool test;
-	//float advantage;
 	U8 from, to;
 	for(;;) { // strange things are happening 
 LOOP: // works ok to me		
-		if(!blackplaying)
+		if(!currBoard.blackplaying) // then white must be playing
 		{
-			printf("\a");
-			test = parseInput(&from, &to);
+			printf("\a"); // notiy that they are to input
+			test = parseInput(&from, &to); //take their input
 		}
-		else{
+		else{ // otherwise let the bot play
 			test = calculateBestMove(currBoard, true, 4, &from, &to);			
 		}
 		
 		if (!test) goto LOOP;
-		test = movePiece(from, to, blackplaying);
+		test = movePiece(from, to);
 		if (!test) goto LOOP;
-		blackplaying=!blackplaying; // switch players
-		blackplaying?puts("\nBlack to play"):puts("\nWhite to play");
-
-		printBoard(currBoard.bitboard, blackplaying);
+		
+		currBoard.blackplaying=!currBoard.blackplaying; // switch players
+		
+		if(inCheckMate(currBoard)) {
+			printBoard(currBoard);
+			puts("Checkmate");
+			break; // end game
+		}
+		
+		if(inStaleMate(currBoard)) {
+			printBoard(currBoard);
+			puts("Stalemate");
+			break; // end game
+		}
+		currBoard.blackplaying?puts("\nBlack to play"):puts("\nWhite to play");
+		if(inCheck(currBoard)) puts("Check");
+		printBoard(currBoard);
 	}
-	return(0);
+	return;
 }
 
+void
+localMultiplayer()
+{
+	puts("White to play");
+	printBoard(currBoard);
+	// user input
+	// every time the user inputs a new move the attack vectors need to be reevaluated.
+	bool test;
+	U8 from, to;
+	for(;;) { // strange things are happening 
+LOOP: // works ok to me
+		test = parseInput(&from, &to);
+		if (!test) goto LOOP;
+		test = movePiece(from, to);
+		if (!test) goto LOOP;
+		currBoard.blackplaying=!currBoard.blackplaying; // switch players
+		if(inCheckMate(currBoard)) {
+			printBoard(currBoard);
+			puts("Checkmate");
+			break; // end game
+		}
+		if(inStaleMate(currBoard)) {
+			printBoard(currBoard);
+			puts("Stalemate");
+			break; // end game
+		}
+		currBoard.blackplaying?puts("\nBlack to play"):puts("\nWhite to play");
+		if(inCheck(currBoard)) puts("Check");
+		printBoard(currBoard);
+	}
+	return;
+}
+
+//add something here for not having to take piece or black
 char 
 findPiece(Coord pos, U8 *piece, bool *colourblack, Board *bitboard) //returns a char representation of a piece for printing. A number as per the enum and a boolean on the colour of the piece.
 {
-	U64 p = 1LL;
+	U8 extra;
+	if (piece == NULL) piece = &extra;
+	if (colourblack == NULL) colourblack = (bool *) &extra;
+	U64 p = 1ULL;
 	char out = 'A'; // temp for checking for errors
 	*colourblack = false;
 	U64 bit = bitboard[total]&(p<<pos); // gets whatever piece is at the location
@@ -108,17 +219,15 @@ findPiece(Coord pos, U8 *piece, bool *colourblack, Board *bitboard) //returns a 
 }
 
 Board
-calculateAttackVectors(Board *bitboard, bool black) //returns an attack vector for a colour
+calculateAttackVectors(Board *bitboard, bool blackplaying) //returns an attack vector for a colour
 {
 	char piece;
 	Board vector = 0;
-	U8 a; // unused
-	bool b; // unused
 	for (int i = 0; i < 64; i++) {
-		if ((piece=findPiece(i, &a, &b, bitboard))!='.') { // find every piece that isn't a blank piece
-			if ((piece == 'P') & (!black)) vector |= whitePawnAttackVectors(i); // white and black have different attacks
-			if ((piece == 'p') & black) vector |= blackPawnAttackVectors(i);
-			piece-=32*black; //if the piece is black subtract so that the char goes into the switch cases nicely
+		if ((piece=findPiece(i, NULL, NULL, bitboard))!='.') { // find every piece that isn't a blank piece
+			if ((piece == 'P') & (!blackplaying)) vector |= whitePawnAttackVectors(i); // white and black have different attacks
+			if ((piece == 'p') & blackplaying) vector |= blackPawnAttackVectors(i);
+			piece-=32*blackplaying; //if the piece is black subtract so that the char goes into the switch cases nicely
 			switch(piece) 
 			{
 				case('R'):
@@ -155,7 +264,7 @@ void
 printBits(U8 byte) // used in debugging
 {
 	for (int i = 0; i < 8; i++) {
-		putchar(byte&128?'1':'0');
+		putc(byte&128?'1':'0', stdout);
 		byte<<=1;	
 	}
 	putchar('\n');
@@ -163,18 +272,16 @@ printBits(U8 byte) // used in debugging
 #endif
 
 void
-printBoard(Board *bitboard, bool printblack)
+printBoard(Boardstate bs)
 {
-	U8 a; // unused
-	bool a2; // unused
-	if (printblack) { // print the board upside-down
+	if (bs.blackplaying) { // print the board upside-down
 		for (int i = 0; i < 64; i++) {
 			if (!(i%8))  { 
 				putchar('\n');
 				putchar('1'+(i/8));
 				putchar(' ');
 			}
-			putchar(findPiece(i, &a, &a2, bitboard));
+			putchar(findPiece(i, NULL, NULL, bs.bitboard));
 		}
 		puts("\n\n% HGFEDCBA\n");
 	} else {
@@ -184,7 +291,7 @@ printBoard(Board *bitboard, bool printblack)
 				putchar('8'-(i/8));
 				putchar(' ');
 			}
-			putchar(findPiece(63-i, &a, &a2, bitboard));
+			putchar(findPiece(63-i, NULL, NULL, bs.bitboard));
 		}
 		puts("\n\n% ABCDEFGH\n");
 	}
@@ -213,68 +320,79 @@ parseInput(Coord *coord1, Coord *coord2)
 }
 
 bool 
-movePiece(Coord from, Coord to, bool moveblack) 
+movePiece(Coord from, Coord to) // works exclusively with the current board
 {
-	Boardstate *newbs = malloc(BOARDSTATESIZE); // new boardstate
-	if (!fauxMove(from, to, moveblack, currBoard, newbs)) {
-		free(newbs);
+	Boardstate *newbs = makeBoardstate(NULL, 0, 0); // new boardstate
+	if (!fauxMove(from, to, currBoard, newbs)) {
+		destroyBoardstate(newbs);
 		return false;
 	}
 
-	currBoard.movementflags = newbs->movementflags;
-	memcpy(currBoard.bitboard, newbs->bitboard, BITBOARDSIZE); // copy across the new values to the global bitboard
+	cpyBoardstate(&currBoard, newbs);
 
-	free(newbs->bitboard);
-	free(newbs);
-	
+	destroyBoardstate(newbs);
 	return true;
 }
 
+#define FAUXMOVERET(A, B) {destroyBoardstate(A); return B;}
 bool
-fauxMove(Coord from, Coord to, bool moveblack, Boardstate bs, Boardstate *nbs)
+fauxMove(Coord from, Coord to, Boardstate bs, Boardstate *nbs)
 {
-	*nbs = bs;
-	
-	U8 movementflags = bs.movementflags;
-	Board *bitboard = malloc(BITBOARDSIZE);
-	memcpy(bitboard, bs.bitboard, BITBOARDSIZE);
-	
-	U64 p = 1LL;;
+	Boardstate *extra = makeBoardstate(NULL, 0, 0); // new boardstate
+	if (nbs==NULL) nbs = extra;
+	nbs = cpyBoardstate(nbs, &bs);
+
+	Coord frompiece, topiece, passantpiece;
+	bool fromcolourblack, tocolourblack, passantcolourblack;
+
+	findPiece(from, &frompiece, &fromcolourblack, nbs->bitboard);
+	findPiece(to, &topiece, &tocolourblack, nbs->bitboard);
+
+	Board moves;
+
+
+	if (bs.blackplaying-fromcolourblack || frompiece==nopiece || !(fromcolourblack^tocolourblack)&(topiece!=nopiece)) {
+       	       FAUXMOVERET(extra, false); // Can't move a piece that doesn't exist or take your own piece
+	}
+
+	U64 p = 1ULL;
 	bool test = false;
 	
-	Coord frompiece;
-	bool fromcolourblack;
+	if (frompiece!=pawn) nbs->movementflags&=0xF0; //TODO find a nicer way overall to handle the movement flags for en passant
 
-	Coord topiece;
-	bool tocolourblack;
-
-	Coord passantpiece;
-	bool passantcolourblack;
-
-	findPiece(from, &frompiece, &fromcolourblack, bitboard);
-	findPiece(to, &topiece, &tocolourblack, bitboard);
-
-	if (moveblack-fromcolourblack || frompiece==nopiece || !(fromcolourblack^tocolourblack)&(topiece!=nopiece)) {
-	       free(bitboard);
-       	       return false; // if the from piece doesn't exist or both are the same colour.
-	}
 	//do testing based on piece
 	switch(frompiece) {
 		case(pawn):
 			if (fromcolourblack) {
-				test = blackPawnMovement(from, to, *nbs);
-				if (test&2) { //en passant logic
-					findPiece(to+8, &passantpiece, &passantcolourblack, bitboard);	
-					bitboard[total]^=p<<(to+8);
+				test = blackPawnMovement(from, to, *nbs, &moves);
+				if (test == 2) { //en passant logic
+					findPiece(to+8, &passantpiece, &passantcolourblack, nbs->bitboard);
+					nbs->bitboard[total]^=p<<(to+8);
+				} 
+				if(test == 3) { // update flags for double move
+					nbs->movementflags&=0xF0;
+					nbs->movementflags|=from%8;
+					nbs->movementflags|=0x8;
+				} else {
+					nbs->movementflags&=0xF0;
 				}
 			} else {
-				test = whitePawnMovement(from, to, *nbs);
-				if (test&2) {
-					findPiece(to-8, &passantpiece, &passantcolourblack, bitboard);	
-					bitboard[total]^=p<<(to-8);
+				test = whitePawnMovement(from, to, *nbs, &moves);
+				if (test == 2) { // en passant
+					findPiece(to-8, &passantpiece, &passantcolourblack, nbs->bitboard);	
+					nbs->bitboard[black]^=p<<(to-8);
+					nbs->bitboard[total]^=p<<(to-8);
+				}
+				if(test == 3) { // update flags for double move
+					nbs->movementflags&=0xF0;
+					nbs->movementflags|=from%8;
+					nbs->movementflags|=0x8;
+				} else {
+					bs.movementflags&=0xF0;
 				}
 			}
 			// pawn has reached the end of the board 
+			// //update this to be ai friendly
 			if (test && (0==to>>3 || 7==to>>3)) {
 				puts("Enter which piece you want (R=1, K=2, B=3, Q=4): ");
 				U8 pieceno;
@@ -294,16 +412,16 @@ PROMOTION:
 			}
 			break;
 		case(rook):
-			test = rookMovement(from, to, bitboard);
+			test = rookMovement(from, to, *nbs, NULL);
 			break;
 		case(knight):
-			test = knightMovement(from, to);
+			test = knightMovement(from, to, *nbs, NULL);
 			break;
 		case(bishop):
-			test = bishopMovement(from, to, bitboard); 
+			test = bishopMovement(from, to, *nbs, NULL); 
 			break;
 		case(queen):
-			test = queenMovement(from, to, bitboard);
+			test = queenMovement(from, to, *nbs, NULL);
 			break;
 		case(king):
 			// return codes:
@@ -314,43 +432,42 @@ PROMOTION:
 			// 4 Black left castle
 			// 5 Black right castle
 			// relevent castle needs to be moved and total updated
-			test = kingMovement(from, to, *nbs);
+			test = kingMovement(from, to, *nbs, NULL);
 			switch (test) {
 				case(2):
-					bitboard[rook]^=p<<7;
-					bitboard[rook]|=p<<4;
-					bitboard[total]^=p<<7;
-					bitboard[total]|=p<<4;
+					nbs->bitboard[rook]^=p<<7;
+					nbs->bitboard[rook]|=p<<4;
+					nbs->bitboard[total]^=p<<7;
+					nbs->bitboard[total]|=p<<4;
 					break;
 				case(3):
-					bitboard[rook]^=0;
-					bitboard[rook]|=p<<2;
-					bitboard[total]^=0;
-					bitboard[total]|=p<<2;
+					nbs->bitboard[rook]^=1;
+					nbs->bitboard[rook]|=p<<2;
+					nbs->bitboard[total]^=1;
+					nbs->bitboard[total]|=p<<2;
 					break;
-				case(4): // need to update black bitboard too
-					bitboard[black]^=p<<63;
-					bitboard[black]|=p<<60;
-					bitboard[rook]^=p<<63;
-					bitboard[rook]|=p<<60;
-					bitboard[total]^=p<<63;
-					bitboard[total]|=p<<60;
+				case(4): // need to update black nbs->bitboard too
+					nbs->bitboard[black]^=p<<63;
+					nbs->bitboard[black]|=p<<60;
+					nbs->bitboard[rook]^=p<<63;
+					nbs->bitboard[rook]|=p<<60;
+					nbs->bitboard[total]^=p<<63;
+					nbs->bitboard[total]|=p<<60;
 					break;
 				case(5):
-					bitboard[black]^=p<<56;
-					bitboard[black]|=p<<58;
-					bitboard[rook]^=p<<56;
-					bitboard[rook]|=p<<58;
-					bitboard[total]^=p<<56;
-					bitboard[total]|=p<<58;
+					nbs->bitboard[black]^=p<<56;
+					nbs->bitboard[black]|=p<<58;
+					nbs->bitboard[rook]^=p<<56;
+					nbs->bitboard[rook]|=p<<58;
+					nbs->bitboard[total]^=p<<56;
+					nbs->bitboard[total]|=p<<58;
 					break;
 			}
 			break;
 	}
 
-	if (!test) {
-		free(bitboard);
-		return false;
+	if (!test) { // if the piece can't move there
+		FAUXMOVERET(extra, false);
 	}
 	// set to piece with opposite colour. remove from piece
 	// calc attack vectors
@@ -358,57 +475,207 @@ PROMOTION:
 	//
 	// tries to update a piece's position
 	if (fromcolourblack) {
-		bitboard[black]^=p<<from;	// remove the old piece's position
-		bitboard[black]|=p<<to;		// update it to the new spot
-	} else 	bitboard[black]&=(-1^(p<<to)); // if the new piece is white it needs to be removed from the black board
-	bitboard[frompiece]^=p<<from; // update piece moving
-	if (topiece!=nopiece) bitboard[topiece]^=p<<to; // remove taken piece
-	bitboard[frompiece]|=p<<to; // move the from piece
-	bitboard[total]^=p<<from; // update total board for tracking/finding pieces
-	bitboard[total]|=p<<to;	
-	
-
-// bitboard[king]&(((moveblack-1)&bitboard[total])^bitboard[black])&calculateAttackVectors(!moveblack); returns white/black's threatened king position
-	// white or black board (player colour) & with king. If attack 
-	// (opposite colour) & with the white/black king its under threat.
-
-	// this should be rewritten to be more robust and predictive
-	if (bitboard[king]&(((moveblack-1)&bitboard[total])^bitboard[black])&calculateAttackVectors(bitboard, !moveblack)) {
+		nbs->bitboard[black]^=p<<from;	// remove the old piece's position
+		nbs->bitboard[black]|=p<<to;		// update it to the new spot
+	} else 	nbs->bitboard[black]&=(-1^(p<<to)); // if the new piece is white it needs to be removed from the black board
+	nbs->bitboard[frompiece]^=p<<from; // update piece moving
+	if (topiece!=nopiece) nbs->bitboard[topiece]^=p<<to; // remove taken piece
+	nbs->bitboard[frompiece]|=p<<to; // move the from piece
+	nbs->bitboard[total]^=p<<from; // update total board for tracking/finding pieces
+	nbs->bitboard[total]|=p<<to;
+	if (inCheck(*nbs)) {
 		//puts("Check");	
 		
 		// if the king is under attack we need to undo piece movement
 		
 		if (fromcolourblack) {
-			bitboard[black]^=p<<from;	
-			bitboard[black]|=p<<to;	
-		} else 	bitboard[black]^=p<<to;	
+			nbs->bitboard[black]^=p<<from;	
+			nbs->bitboard[black]|=p<<to;	
+		} else 	nbs->bitboard[black]^=p<<to;	
 			
-		bitboard[frompiece]^=p<<from; 
+		nbs->bitboard[frompiece]^=p<<from; 
 
-		if (topiece!=nopiece) bitboard[topiece]^=p<<to; // remove taken piece
-		bitboard[frompiece]&=(-1^p<<to);
-		bitboard[total]^=p<<from; // update total board for tracking/finding pieces
-		bitboard[total]&=(-1^p<<to);
+		if (topiece!=nopiece) nbs->bitboard[topiece]^=p<<to; // remove taken piece
+		nbs->bitboard[frompiece]&=(-1^p<<to);
+		nbs->bitboard[total]^=p<<from; // update total board for tracking/finding pieces
+		nbs->bitboard[total]&=(-1^p<<to);
 		
-		free(bitboard);
-		return false;
+		FAUXMOVERET(extra, false);
 	}
 
 	// if a king or rook succesfully moved
 	if (frompiece==king) {
-		if (from==0x3) movementflags &= 0x3F; // can't castle either way
-		if (from==0x3B) movementflags &= 0xCF;
+		if (from==0x3) nbs->movementflags &= 0x3F; // can't castle either way
+		if (from==0x3B) nbs->movementflags &= 0xCF;
 	}
 
 	if (frompiece==rook) {
-		if (from==0x7) movementflags &= 0x7F; // cant castle left anymore
-		if (from==0) movementflags &= 0xBF; // cant castle right anymore
-		if (from==0x3F) movementflags &= 0xDF;
-		if (from==0x38) movementflags &= 0xEF;
+		if (from==0x7) nbs->movementflags &= 0x7F; // cant castle left anymore
+		if (from==0) nbs->movementflags &= 0xBF; // cant castle right anymore
+		if (from==0x3F) nbs->movementflags &= 0xDF;
+		if (from==0x38) nbs->movementflags &= 0xEF;
 	}
 
-	Boardstate tempbs = {movementflags, bitboard}; // package the new states together to be returned
-	*nbs = tempbs; // returned with new boardstate
+	FAUXMOVERET(extra, true);
+}
 
-	return true;
+inline Coord btoc(Board b)
+{
+	if (!b) return 0;
+	Coord pos = 0;
+	for (pos=0;!(b&1);b>>=1) pos++;
+	return pos;
+}
+
+// bs.bitboard[king]&(((moveblack-1)&bs.bitboard[total])^bs.bitboard[black])&calculateAttackVectors(!moveblack); returns white/black's threatened king position
+// white or black board (player colour) & with king. If attack 
+// (opposite colour) & with the white/black king its under threat.
+
+inline Board getPlayerBoard(Board *bitboard, bool blackplaying) {
+	return ((blackplaying-1)&bitboard[total])^bitboard[black];
+}
+
+inline bool inCheck(Boardstate bs) // invert this moveblack
+{
+	return !!(bs.bitboard[king]&getPlayerBoard(bs.bitboard, bs.blackplaying)&calculateAttackVectors(bs.bitboard, !bs.blackplaying));
+}
+
+////
+//Rewrite to use a bespoke function instead of fauxmove optimised for speed in this case?
+////
+
+
+// checks if the king is in mate
+//  -> checks if the king can move to any of its 8 possible moves
+//   -> gets every piece of your colour and every potential square the king can be attacked on and keeps trying to move pieces until its out of mate.
+
+bool
+inCheckMate(Boardstate bs)
+{
+	if (!inCheck(bs)) return false;
+	// Can the King move anywhere
+	//         111
+	//         1K1
+	//         111
+	// Find relevent King and get his Coordinates
+	
+	Board pieces = getPlayerBoard(bs.bitboard, bs.blackplaying); // Board containing just the king in question
+
+	Board kingb = bs.bitboard[king]&pieces;
+	
+	Coord kingc = btoc(kingb);
+	/*
+	bool test = false; // check if king can move out of check, most common way of moving out of mate, faster to try the king first
+	test |= fauxMove(kingc, kingc+9, bs, NULL); // if the piece can move its not a check
+	test |= fauxMove(kingc, kingc+8, bs, NULL);
+	test |= fauxMove(kingc, kingc+7, bs, NULL);
+	test |= fauxMove(kingc, kingc+1, bs, NULL);
+	test |= fauxMove(kingc, kingc-1, bs, NULL);
+	test |= fauxMove(kingc, kingc-7, bs, NULL);
+	test |= fauxMove(kingc, kingc-8, bs, NULL);
+	test |= fauxMove(kingc, kingc-9, bs, NULL);
+	if (test) return 1; // not checkmate if king can move out of check
+	*/
+	//check if any other piece can move to block
+	
+	Board vectors = queenAttackVectors(kingc, bs.bitboard) | knightAttackVectors(kingc); // every position that can be attacking the king
+
+	Board tempcoverage, coverage;
+
+	Coord from, to;
+
+	U8 piece = nopiece;
+
+	for (; pieces; pieces&=(pieces-1)) { // iterate through all the possible pieces trying to block
+		from = btoc(pieces);
+		findPiece(from, &piece, NULL, bs.bitboard);
+		switch(piece) {
+			case(pawn):
+				if (bs.blackplaying) {
+					blackPawnMovement(from, 0, bs, &coverage);
+				} else	whitePawnMovement(from, 0, bs, &coverage);
+				break;
+			case(rook):
+				rookMovement(from, 0, bs, &coverage);
+				break;
+			case(knight):
+				knightMovement(from, 0, bs, &coverage);
+				break;
+			case(bishop):
+				bishopMovement(from, 0, bs, &coverage);
+				break;
+			case(queen):
+				queenMovement(from, 0, bs, &coverage);
+				break;
+			case(king):
+				kingMovement(from, 0, bs, &coverage);
+				break;
+			default:
+				coverage = 0;
+				break;
+		}
+		coverage &= vectors; // only tries to move where pieces can move
+		for (tempcoverage = coverage; tempcoverage; tempcoverage&=(tempcoverage-1)) {
+			to = btoc(tempcoverage);
+			if(fauxMove(from, to, bs, NULL)) return false; // if it can stop the mate
+		}
+	}
+
+	return true; // couldn't find a potential move
+}
+
+// 1) Not in check
+// 2) Can't move any piece
+//  -> Go through every piece, try and generate its movement vector then try and make that move with fauxmove?
+
+bool
+inStaleMate(Boardstate bs)
+{
+	if (inCheck(bs)) return false; // can't be in check and in stalemate
+	
+	Board pieces = getPlayerBoard(bs.bitboard, bs.blackplaying); //returns a board of all the players pieces
+
+	Board tempcoverage, coverage;
+
+	Coord from, to;
+
+	U8 piece = nopiece;
+
+	for (; pieces; pieces&=(pieces-1)) { // iterate through all the possible pieces trying to move
+		from = btoc(pieces);
+		// findPiece, switch according to piece and generate coverage board from that
+		// maybe split this into its own function
+		findPiece(from, &piece, NULL, bs.bitboard);
+		switch(piece) {
+			case(pawn):
+				if (bs.blackplaying) {
+					blackPawnMovement(from, 0, bs, &coverage);
+				} else	whitePawnMovement(from, 0, bs, &coverage);
+				break;
+			case(rook):
+				rookMovement(from, 0, bs, &coverage);
+				break;
+			case(knight):
+				knightMovement(from, 0, bs, &coverage);
+				break;
+			case(bishop):
+				bishopMovement(from, 0, bs, &coverage);
+				break;
+			case(queen):
+				queenMovement(from, 0, bs, &coverage);
+				break;
+			case(king):
+				kingMovement(from, 0, bs, &coverage);
+				break;
+			default:
+				coverage = 0;
+				break;
+		}
+		for (tempcoverage = coverage; tempcoverage; tempcoverage&=(tempcoverage-1)) {
+			to = btoc(tempcoverage);
+			if(fauxMove(from, to, bs, NULL)) return false;
+		}
+	}
+
+	return true; // couldn't find a potential move
 }

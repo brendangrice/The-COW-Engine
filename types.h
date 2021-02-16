@@ -21,8 +21,9 @@ typedef U8 Coord; //always between 0-63 to fit on the board, helps with legibili
 typedef U64 Board; //used for representing bitboards, helps with legibility and intent
 
 typedef struct {
-	U8 movementflags;
 	Board *bitboard;
+	U8 movementflags;
+	bool blackplaying;
 } Boardstate;
 
 #endif

@@ -127,14 +127,15 @@ bool isMoveable(Boardstate bs, int position, char piece, bool isBlack)
 		{
 			//vectors |= (blackPawnAttackVectors(position)&(bs.bitboard[total]^bs.bitboard[black]));
 			vectors |= (blackPawnAttackVectors(position));
-			vectors |= blackPawnMovement(position, position<<8, bs);
+			//Board *b;
+			vectors |= blackPawnMovement(position, position<<8, bs, &vectors);
 			ownPieces = bs.bitboard[black];
 		}
 		else
 		{
 			//vectors |= (whitePawnAttackVectors(position)&(bs.bitboard[black]));
 			vectors |= (whitePawnAttackVectors(position));
-			vectors |= whitePawnMovement(position, position>>8, bs);
+			vectors |= whitePawnMovement(position, position>>8, bs, &vectors);
 			ownPieces = (bs.bitboard[total]^bs.bitboard[black]);
 		}
 		excludeSelf = ((bs.bitboard[total])&1ULL<<position);
@@ -179,7 +180,7 @@ possibleMoveTo(Boardstate bs, bool isBlack, U8 *from, int size)
 	Board self = 0ULL;
 	Board b = 0ULL; // tempoary board to store where the piece is
 	Board vectors = 0ULL; // vector board which will contain all possible moveable to squares
-	
+	Board temp = 0ULL; // Adding to deal with the changes made to moves.c
 	isBlack?(self = bs.bitboard[black]) : (self = bs.bitboard[total] ^ bs.bitboard[black]);
 	
 	//!isBlack?(opponent = bs.bitboard[black]) : (opponent = bs.bitboard[total] ^ bs.bitboard[black]);
@@ -200,22 +201,22 @@ possibleMoveTo(Boardstate bs, bool isBlack, U8 *from, int size)
 			{
 				if(isBlack)
 				{
-					if(blackPawnMovement(i, i-8, bs)) // can it move down one square
+					if(blackPawnMovement(i, i-8, bs, &temp)) // can it move down one square
 					{
 						vectors |= (1ULL<<(i-8))^((1ULL<<(i-8))&self);
 					}
-					if(blackPawnMovement(i, i-16, bs)) // can it move down two square
+					if(blackPawnMovement(i, i-16, bs, &temp)) // can it move down two square
 					{
 						vectors |= (1ULL<<(i-16))^((1ULL<<(i-16))&self);
 					}
 				}
 				else
 				{
-					if(whitePawnMovement(i, i+8, bs)) // can it move up one square
+					if(whitePawnMovement(i, i+8, bs, &temp)) // can it move up one square
 					{
 						vectors |= (1ULL<<(i+8))^((1ULL<<(i+8))&self);
 					}
-					if(blackPawnMovement(i, i+16, bs)) // can it move up two square
+					if(whitePawnMovement(i, i+16, bs, &temp)) // can it move up two square
 					{
 						vectors |= (1ULL<<(i+16))^((1ULL<<(i+16))&self);
 					}
@@ -349,7 +350,7 @@ NegaMax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 	int i = 0;
 	int x = 0;
 	int attempts = 0;
-	
+
 	// get a stack of available pieces to move
 	struct MoveStack* availablePieces = moveablePieces(bs, isBlack);
 	U8 from [getSize(availablePieces)];
@@ -362,6 +363,8 @@ NegaMax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 		
 	float bestMove = -9999;
 
+	
+	
 	for(int f = 0 ; f < sizeof(from); f++)
 	{
 		
@@ -370,10 +373,16 @@ NegaMax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 			iter++;
 			Coord one = from[f];
 			Coord two = to[t];
-			Boardstate newbs;
-			if(fauxMove(one, two, isBlack, bs, &newbs))
+			//Boardstate newbs;
+			//Boardstate *newbs = makeBoardstate(NULL, 0, 0); // new boardstate 
+			Boardstate *newbs = makeBoardstate(NULL, bs.movementflags, bs.blackplaying); // new boardstate 
+			if(fauxMove(one, two, bs, newbs))
 			{
-				bestMove = Max(bestMove, -NegaMax(depth-1, newbs, !isBlack, -beta, -alpha));
+				Boardstate b = newbs[0];
+				b.blackplaying = !b.blackplaying;
+				free(newbs);
+				//debugPrintBoard(b.bitboard);
+				bestMove = Max(bestMove, -NegaMax(depth-1, b, !isBlack, -beta, -alpha));
 				alpha = Max(alpha, bestMove);
 				if(beta <= alpha)
 				{
@@ -477,7 +486,7 @@ minimax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 				Coord two = to[t];
 				Boardstate newbs;
 			
-				if(fauxMove(one, two, isBlack, bs, &newbs))
+				if(fauxMove(one, two,	 bs, &newbs))
 				{					
 					bestMove = Max(bestMove, minimax(depth-1, newbs, !isBlack, alpha, beta));
 					alpha = Max(alpha, bestMove);
@@ -524,7 +533,7 @@ minimax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 				Coord one = from[f];
 				Coord two = to[t];
 				Boardstate newbs;
-				if(fauxMove(one, two, isBlack, bs, &newbs))
+				if(fauxMove(one, two, bs, &newbs))
 				{	
 					bestMove = Min(bestMove, minimax(depth-1, newbs, !isBlack, alpha, beta));
 					beta = Min(beta, bestMove);
@@ -616,10 +625,16 @@ calculateBestMove(Boardstate bs, bool isBlack, int depth, Coord *coord1, Coord *
 		{
 			Coord one = from[f];
 			Coord two = to[t];
-			Boardstate newbs;
-			if(fauxMove(one, two, isBlack, bs, &newbs))
+			//Boardstate newbs;
+			Boardstate *newbs = makeBoardstate(NULL, bs.movementflags, bs.blackplaying); // new boardstate 
+			if(fauxMove(one, two, bs, newbs))
 			{
-				float newAdvantage = -NegaMax(depth-1, newbs, !isBlack, -10000, 10000);
+				Boardstate b = newbs[0];
+				free(newbs);
+				b.blackplaying = !b.blackplaying;
+				//debugPrintBoard(b.bitboard);
+				//puts("going to negamax");
+				float newAdvantage = -NegaMax(depth-1, b, !isBlack, -10000, 10000);
 				//float newAdvantage = minimax(depth-1, newbs, !isBlack, -10000, 10000);
 				if(newAdvantage > bestScore)
 				{
