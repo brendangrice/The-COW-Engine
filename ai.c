@@ -1,7 +1,7 @@
 #include "eval.h"
 #include "main.h"
 #include "ai.h"
-
+int iter = 0;
 struct Node
 {
 	Boardstate boardstate; // each node has a boardstate
@@ -362,6 +362,27 @@ NegaMax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 		
 	float bestMove = -9999;
 
+	for(int f = 0 ; f < sizeof(from); f++)
+	{
+		
+		for(int t = 0 ; t < sizeof(to); t++)
+		{
+			iter++;
+			Coord one = from[f];
+			Coord two = to[t];
+			Boardstate newbs;
+			if(fauxMove(one, two, isBlack, bs, &newbs))
+			{
+				bestMove = Max(bestMove, -NegaMax(depth-1, newbs, !isBlack, -beta, -alpha));
+				alpha = Max(alpha, bestMove);
+				if(beta <= alpha)
+				{
+					return alpha;
+				}
+			}
+		}
+	}
+	/*
 	while(attempts < 100)
 	{
 		// make a move from selecting from random squares
@@ -372,26 +393,26 @@ NegaMax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 		if(fauxMove(one, two, isBlack, bs, &newbs))
 		{
 			attempts++;
-			/*
-			float value = -NegaMax(depth-1, newbs, !isBlack, alpha, beta);
-			if(value > bestMove)
-				bestMove = value;
-			if(bestMove > alpha)
-				alpha = bestMove;
-			if(bestMove >= beta)
-				return bestMove;
-			*/
 			
-			/*
-			float value = -NegaMax(depth-1, newbs, !isBlack, -b, -alpha);
-			if((value > alpha) && (value < beta))
-			{
-				value = -NegaMax(depth-1, newbs, !isBlack, -beta, -alpha);
-			}
-			alpha = Max(alpha, value);
-			if(alpha >= beta) return alpha;
-			b = alpha+1;
-			*/
+			//float value = -NegaMax(depth-1, newbs, !isBlack, alpha, beta);
+			//if(value > bestMove)
+			//	bestMove = value;
+			//if(bestMove > alpha)
+			//	alpha = bestMove;
+			//if(bestMove >= beta)
+			//	return bestMove;
+			
+			
+			
+			//float value = -NegaMax(depth-1, newbs, !isBlack, -b, -alpha);
+			//if((value > alpha) && (value < beta))
+			//{
+			//	value = -NegaMax(depth-1, newbs, !isBlack, -beta, -alpha);
+			//}
+			//alpha = Max(alpha, value);
+			//if(alpha >= beta) return alpha;
+			//b = alpha+1;
+			
 			
 			
 			bestMove = Max(bestMove, -NegaMax(depth-1, newbs, !isBlack, -beta, -alpha));
@@ -403,6 +424,7 @@ NegaMax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 			
 		}
 	}
+	*/
 	return bestMove;
 }
 
@@ -445,6 +467,29 @@ minimax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 	if(!isBlack) // is maximising
 	{
 		bestMove = -9999;
+		
+		for(int f = 0; f < sizeof(from); f++)
+		{
+			for(int t = 0 ; t < sizeof(to); t++)
+			{
+				iter++;
+				Coord one = from[f];
+				Coord two = to[t];
+				Boardstate newbs;
+			
+				if(fauxMove(one, two, isBlack, bs, &newbs))
+				{					
+					bestMove = Max(bestMove, minimax(depth-1, newbs, !isBlack, alpha, beta));
+					alpha = Max(alpha, bestMove);
+					if(alpha >= beta)
+					{
+						return bestMove;
+					}
+				}
+			}
+		}
+		
+		/*
 		while(attempts < 100)
 		{
 			// make a move from selecting from random squares
@@ -459,16 +504,39 @@ minimax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 				//float newAdvantage = ; 
 				bestMove = Max(bestMove, minimax(depth-1, newbs, !isBlack, alpha, beta));
 				alpha = Max(alpha, bestMove);
-				if(beta <= alpha)
+				if(alpha >= beta)
 				{
 					return bestMove;
 				}
 			}
 		}
+		*/
+		
 	}
 	else // is minimizing
 	{
 		bestMove = 9999;
+		for(int f = 0 ; f < sizeof(from); f++)
+		{
+			for(int t = 0 ; t < sizeof(to); t++)
+			{
+				iter++;
+				Coord one = from[f];
+				Coord two = to[t];
+				Boardstate newbs;
+				if(fauxMove(one, two, isBlack, bs, &newbs))
+				{	
+					bestMove = Min(bestMove, minimax(depth-1, newbs, !isBlack, alpha, beta));
+					beta = Min(beta, bestMove);
+					if(beta<=alpha)
+					{
+						return bestMove;
+					}
+				}
+			}
+		}
+		
+		/*
 		while(attempts < 100)
 		{
 			// make a move from selecting from random squares
@@ -489,6 +557,8 @@ minimax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 				}
 			}
 		}
+		*/
+		
 	}
 	return bestMove;
 }
@@ -539,7 +609,30 @@ calculateBestMove(Boardstate bs, bool isBlack, int depth, Coord *coord1, Coord *
 	// track the best score of the game
 	float bestScore = -9999.0;
 	int attempts = 0; // try for a number of successful moves that improve position
-	//bool bestMoveFound;
+	
+	for(int f = 0 ; f < sizeof(from); f++)
+	{
+		for(int t = 0 ; t < sizeof(to); t++)
+		{
+			Coord one = from[f];
+			Coord two = to[t];
+			Boardstate newbs;
+			if(fauxMove(one, two, isBlack, bs, &newbs))
+			{
+				float newAdvantage = -NegaMax(depth-1, newbs, !isBlack, -10000, 10000);
+				//float newAdvantage = minimax(depth-1, newbs, !isBlack, -10000, 10000);
+				if(newAdvantage > bestScore)
+				{
+					printf("\nadvantage = %.3f (%d %d)", newAdvantage, one, two);
+					bestScore = newAdvantage;
+					best1 = one;
+					best2 = two;
+				}
+			}
+		}
+	}
+	
+	/*
 	while(attempts < 1000)
 	{
 		// make a move from selecting from random squares
@@ -555,8 +648,8 @@ calculateBestMove(Boardstate bs, bool isBlack, int depth, Coord *coord1, Coord *
 			//debugPrintBoard(newbs.bitboard[total]);
 			// check to see if this new board position is favorable 
 			//float newAdvantage = calculateAdvantage(newbs);
-			float newAdvantage = minimax(depth-1, newbs, !isBlack, -10000, 10000);
-			//float newAdvantage = -NegaMax(depth-1, newbs, !isBlack, -10000, 10000);
+			//float newAdvantage = minimax(depth-1, newbs, !isBlack, -10000, 10000);
+			float newAdvantage = -NegaMax(depth-1, newbs, !isBlack, -10000, 10000);
 			
 			if(newAdvantage > bestScore)
 			{
@@ -564,12 +657,15 @@ calculateBestMove(Boardstate bs, bool isBlack, int depth, Coord *coord1, Coord *
 				bestScore = newAdvantage;
 				best1 = one;
 				best2 = two;
-			}
-			
+			}	
 		}
-		
 	}
+	*/
+	
+	
+	
 	printf("\nThe best move to make is (%d %d) @ %.3f", best1, best2, bestScore);
+	printf("\nitter = %d", iter);
 	*coord1 = best1;
 	*coord2 = best2;
 	return true;

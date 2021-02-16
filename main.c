@@ -50,7 +50,7 @@ LOOP: // works ok to me
 			test = parseInput(&from, &to);
 		}
 		else{
-			test = calculateBestMove(currBoard, true, 3, &from, &to);			
+			test = calculateBestMove(currBoard, true, 4, &from, &to);			
 		}
 		
 		if (!test) goto LOOP;
