@@ -39,6 +39,7 @@ main()
 		char *cht = malloc(5);
 		fputs("\nLocal multiplayer: 1\n", stdout);
 		fputs("Online multiplayer: 2\n", stdout);
+		fputs("Host an online multiplayer game: 3\n", stdout);
 		fputs("Quit: q\n", stdout);
 REPEATGAMEMODEINPUT:
 		fgets(cht, 4, stdin);
@@ -50,6 +51,9 @@ REPEATGAMEMODEINPUT:
 				break;
 			case('2'):
 				onlineMultiplayer();
+				break;
+			case('3'):
+				onlineMultiplayerHosting();
 				break;
 			case('q'):
 				return 0;
@@ -91,32 +95,16 @@ onlineMultiplayer()
 {
 	setBitBoard();
 	//add something to handle ip
-	char *domainandport = malloc(30);
-	char *domain = malloc(20);
-	memset(domain, 0, 20);
-	char *port = malloc(10);
-	memset(port, 0, 20);
-	fputs("Enter the domain address you want to connect to: ", stdout);
-	fgets(domainandport, 30, stdin);
-	fflush(stdout);
-	domainandport[strlen(domainandport)-1] = '\0'; // remove \n
-	char *portpos = strchr(domainandport, ':');
-	if (portpos==NULL) {
-		domain=domainandport;
-		fputs("Enter the port you want to connect to: ", stdout);
-		fgets(port, 10, stdin);
-		port[strlen(port)-1] = '\0';
-	} else {
-		domain = strncat(domain, domainandport, portpos-domainandport);
-		port = strncat(port, ++portpos, 9);
-	}
 	
+	char domain[20];
+	char port[10];
+	getDomainAndPort(domain, port);
 	sas *servcon = malloc(sizeof(sas));
 	fputs("Attempting to connect...\n", stdout);
-	bool test = serverConnect(domain, port, servcon);
-	if (!test) {
-		return;
-	}
+	if(!serverConnect(domain, port, servcon)) {
+		free(servcon);
+		return;	
+	};
 	char serverreplyplayer;
 	Coord serverIO[3];
 	bool player; //  white is false, black is true
@@ -166,6 +154,57 @@ onlineMultiplayer()
 		if (!sendOutput(servcon, (char *) &serverIO, 2)) break;
 	}
 	free(servcon);
+
+	fputs("Connection lost...\n", stdout);
+	return;
+}
+
+// setup socket + bind port
+// wait for a connection
+// tell that connection they're black
+// repeat for(;;) loop above
+	
+void
+onlineMultiplayerHosting()
+{
+	const U8 s_port = 10;
+	char port[s_port];
+	Coord serverIO[3];
+	//fgets in
+	puts("Enter the port you want to use");
+	fgets(port, s_port, stdin);
+	if (port[strlen(port)-1]!='\n') {
+		puts("shit left");
+	}
+
+	sas *serv = malloc(sizeof(sas));
+	sas *client = malloc(sizeof(sas));
+	puts("Opening a server");
+	if (!serverHost(port, serv, client)) return;
+
+	puts("Black connected");
+
+	setBitBoard();
+	bool player = 0;
+	printBoard(currBoard.bitboard, player);
+	while(!parseInput(serverIO, serverIO+1) || !movePiece(serverIO[0], serverIO[1], player)); // split for special interrupts on inputs/parseInput needs to be redone
+	if (!sendOutput(client, (char *) &serverIO, 2)) goto HOSTINGCONNECTIONLOST;    	
+	printBoard(currBoard.bitboard, player);
+	for(;;) {
+		// add error handling
+		if (!receiveInput(client, (char *) &serverIO, 2)) break;
+		movePiece(serverIO[0], serverIO[1], !player);
+		fputs("Your turn to play: \n", stdout);
+		printBoard(currBoard.bitboard, player);
+		while(!parseInput(serverIO, serverIO+1) || !movePiece(serverIO[0], serverIO[1], player)); // split for special interrupts on inputs/parseInput needs to be redone
+		printBoard(currBoard.bitboard, player);
+		if (!sendOutput(client, (char *) &serverIO, 2)) break;
+	}
+HOSTINGCONNECTIONLOST:
+	close(serv->socket_desc);
+	close(client->socket_desc);
+	free(client);
+	free(serv);
 
 	fputs("Connection lost...\n", stdout);
 	return;

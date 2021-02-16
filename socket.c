@@ -1,14 +1,77 @@
 #include "socket.h"
 
+void
+getDomainAndPort(char *domain, char *port)
+{
+	char *domainandport = malloc(strlen(domain) + strlen(port));
+	memset(domain, 0, strlen(domain));
+	memset(port, 0, strlen(port));
+	fputs("Enter the domain address you want to connect to: ", stdout);
+	fgets(domainandport, 30, stdin);
+	fflush(stdout);
+	domainandport[strlen(domainandport)-1] = '\0'; // remove \n
+	char *portpos = strchr(domainandport, ':');
+	if (portpos==NULL) {
+		domain=domainandport;
+		fputs("Enter the port you want to connect to: ", stdout);
+		fgets(port, 10, stdin);
+		port[strlen(port)-1] = '\0';
+	} else {
+		domain = strncat(domain, domainandport, portpos-domainandport);
+		port = strncat(port, ++portpos, 9);
+	}
+	free(domainandport);
+}
 
 #ifndef _WIN32
 
 #define SOCKETERRORRET(A, B) {perror(A); close(B); return false;}
 
 bool
-serverConnect(char *domain, char *port, sas *socketinfo) 
+serverHost(char *portstr, sas *socketinfo, sas *socketblackinfo)
 {
-	char ip[100];
+	int socket_desc, socket_black;
+	struct sockaddr_in server, sockaddr_black; 
+	int port = atoi(portstr);
+
+	socket_desc = socket(AF_INET, SOCK_STREAM, 0);
+	if (socket_desc == -1) {
+		puts("Couldn't create socket");
+		return false;
+	}
+	
+	server.sin_family = AF_INET;
+	server.sin_addr.s_addr = INADDR_ANY;
+	server.sin_port = htons(port);
+
+	if ( bind(socket_desc, (struct sockaddr *)&server , sizeof(server)) < 0) {
+		puts("Bind failed");
+		return false;
+	}
+
+	listen(socket_desc , 3);
+
+	const int s_sockaddr_in = sizeof(struct sockaddr_in);
+
+	while ((socket_black = accept(socket_desc, (struct sockaddr *)&sockaddr_black, (socklen_t*)&s_sockaddr_in))<0); // wait for black to connect
+
+	usleep(1000);
+
+	socketinfo->socket_desc = socket_desc;
+	socketinfo->server = server;
+	socketblackinfo->socket_desc = socket_black;
+	socketblackinfo->server = sockaddr_black;
+
+	char *message = "B";
+	write(socket_black, message, strlen(message));
+
+	return true;
+}
+
+bool
+serverConnect(char *domain, char *port, sas *socketinfo)
+{
+	char ip[strlen(domain)+strlen(port)];
 	struct hostent *he;
 	int socket_desc;
 	struct in_addr **addr_list;
