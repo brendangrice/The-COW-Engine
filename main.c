@@ -111,7 +111,7 @@ LOOP: // works ok to me
 			test = parseInput(&from, &to); //take their input
 		}
 		else{ // otherwise let the bot play
-			test = calculateBestMove(currBoard, true, 4, &from, &to);			
+			test = calculateBestMove(currBoard, currBoard.blackplaying, 3, &from, &to);			
 		}
 		
 		if (!test) goto LOOP;

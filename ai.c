@@ -1,7 +1,7 @@
 #include "eval.h"
 #include "main.h"
 #include "ai.h"
-int iter = 0;
+//int iter = 0;
 struct Node
 {
 	Boardstate boardstate; // each node has a boardstate
@@ -127,7 +127,6 @@ bool isMoveable(Boardstate bs, int position, char piece, bool isBlack)
 		{
 			//vectors |= (blackPawnAttackVectors(position)&(bs.bitboard[total]^bs.bitboard[black]));
 			vectors |= (blackPawnAttackVectors(position));
-			//Board *b;
 			vectors |= blackPawnMovement(position, position<<8, bs, &vectors);
 			ownPieces = bs.bitboard[black];
 		}
@@ -274,7 +273,6 @@ moveablePieces(Boardstate bs, bool isBlack)
 	isBlack ? (b = bs.bitboard[black]) : (b = bs.bitboard[total] ^ bs.bitboard[black]);
 	//isBlack ? (printf("\nPlaying as black\n")):(printf("\nPlaying as white\n"));
 	struct MoveStack* root = NULL;
-	
 	// print out all of ints that can be moved. 
 	for(int i = 0 ; i < 64; i++)
 	{
@@ -343,9 +341,12 @@ Max(float a, float b)
 float
 NegaMax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 {
-	// base case
+	if(inCheckMate(bs) || inStaleMate(bs))
+	{
+		printf("\n mate in --> #%d", depth);
+		return calculateAdvantage(bs);
+	}
 	if(depth == 0) return calculateAdvantage(bs);
-	// recurive case
 	
 	int i = 0;
 	int x = 0;
@@ -370,18 +371,15 @@ NegaMax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 		
 		for(int t = 0 ; t < sizeof(to); t++)
 		{
-			iter++;
 			Coord one = from[f];
 			Coord two = to[t];
-			//Boardstate newbs;
-			//Boardstate *newbs = makeBoardstate(NULL, 0, 0); // new boardstate 
 			Boardstate *newbs = makeBoardstate(NULL, bs.movementflags, bs.blackplaying); // new boardstate 
 			if(fauxMove(one, two, bs, newbs))
 			{
 				Boardstate b = newbs[0];
 				b.blackplaying = !b.blackplaying;
 				free(newbs);
-				//debugPrintBoard(b.bitboard);
+				//destroyBoardstate(newbs);
 				bestMove = Max(bestMove, -NegaMax(depth-1, b, !isBlack, -beta, -alpha));
 				alpha = Max(alpha, bestMove);
 				if(beta <= alpha)
@@ -440,10 +438,9 @@ NegaMax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 float
 minimax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 {	
-	if(depth == 0)
+	if(depth == 0 || inCheckMate(bs) || inStaleMate(bs))
 	{
-		//printf("\n\tReached the end of a branch");
-		//printf("\n\tAdvantage of this branch = %.3f", calculateAdvantage(bs));
+		printf("\n --> #%d", depth);
 		return -calculateAdvantage(bs);
 	}
 	
@@ -481,7 +478,7 @@ minimax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 		{
 			for(int t = 0 ; t < sizeof(to); t++)
 			{
-				iter++;
+				//iter++;
 				Coord one = from[f];
 				Coord two = to[t];
 				Boardstate newbs;
@@ -529,7 +526,7 @@ minimax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 		{
 			for(int t = 0 ; t < sizeof(to); t++)
 			{
-				iter++;
+				//iter++;
 				Coord one = from[f];
 				Coord two = to[t];
 				Boardstate newbs;
@@ -584,12 +581,12 @@ calculateBestMove(Boardstate bs, bool isBlack, int depth, Coord *coord1, Coord *
 	{
 		from[i++] = pop(&availablePieces);
 	}
-	printf("\nprinting out the array of from positions = [");
-	for(int j = 0 ; j < sizeof(from); j++)
-	{
-		printf("%d ", from[j]);
-	}
-	printf("]\n");
+	//printf("\nprinting out the array of from positions = [");
+	//for(int j = 0 ; j < sizeof(from); j++)
+	//{
+	//	printf("%d ", from[j]);
+	//}
+	//printf("]\n");
 	// free memory
 	free(availablePieces);
 	// get the squares that player can move to
@@ -601,15 +598,15 @@ calculateBestMove(Boardstate bs, bool isBlack, int depth, Coord *coord1, Coord *
 	{
 		to[x++] = pop(&toSquares);
 	}
-	printf("\nprinting out the array of to positions = [");
-	for(int j = 0 ; j < sizeof(to); j++)
-	{
-		printf("%d ", to[j]);
-	}
-	printf("]\n");
+	//printf("\nprinting out the array of to positions = [");
+	//for(int j = 0 ; j < sizeof(to); j++)
+	//{
+	//	printf("%d ", to[j]);
+	//}
+	//printf("]\n");
 	// free memory
 	free(toSquares);
-	printf("\nFinished subsetting");
+	//printf("\nFinished subsetting");
 	
 	
 	// store the best move that it can make
@@ -631,14 +628,13 @@ calculateBestMove(Boardstate bs, bool isBlack, int depth, Coord *coord1, Coord *
 			{
 				Boardstate b = newbs[0];
 				free(newbs);
+				//destroyBoardstate(newbs);
 				b.blackplaying = !b.blackplaying;
-				//debugPrintBoard(b.bitboard);
-				//puts("going to negamax");
 				float newAdvantage = -NegaMax(depth-1, b, !isBlack, -10000, 10000);
 				//float newAdvantage = minimax(depth-1, newbs, !isBlack, -10000, 10000);
 				if(newAdvantage > bestScore)
 				{
-					printf("\nadvantage = %.3f (%d %d)", newAdvantage, one, two);
+					//printf("\nadvantage = %.3f (%d %d)", newAdvantage, one, two);
 					bestScore = newAdvantage;
 					best1 = one;
 					best2 = two;
@@ -679,8 +675,9 @@ calculateBestMove(Boardstate bs, bool isBlack, int depth, Coord *coord1, Coord *
 	
 	
 	
-	printf("\nThe best move to make is (%d %d) @ %.3f", best1, best2, bestScore);
-	printf("\nitter = %d", iter);
+	//printf("\nThe best move to make is (%d %d) @ %.3f", best1, best2, bestScore);
+	printf("\n>Hmmmmm. . . \n>Im going to play (%d %d)\n", best1, best2);
+	//printf("\nitter = %d", iter);
 	*coord1 = best1;
 	*coord2 = best2;
 	return true;
