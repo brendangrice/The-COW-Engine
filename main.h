@@ -7,6 +7,7 @@
 
 #include "types.h"
 #include "moves.h"
+#include "pgn.h"
 
 // Should attack boards be tracked like this
 // when they need to constantly be re-evaluated anyways?

@@ -1,14 +1,9 @@
 #include "main.h"
 
-////
-// Maybe just update total at the end of each move instead of updating it 
-// alongside all the other pieces and movements with one or.
-// REMEMBER TO CHECK ALL THE FREE'S
-////
-
 #define CLEARSTDIN while((c=fgetc(stdin)) != EOF && c != '\n');
 
 Boardstate currBoard;
+Boardstate prevBoard;
 
 int 
 main() 
@@ -49,9 +44,11 @@ setBitBoard()
 	currBoard.blackplaying = false; // game starts with white
 	currBoard.bitboard = malloc(BITBOARDSIZE);
 
-	for (int i = 0; i < BITBOARDELEMENTS; i++) {
-		currBoard.bitboard[i] = 0;		
-	}
+	prevBoard.bitboard = malloc(BITBOARDSIZE);
+
+	for (int i = 0; i < BITBOARDELEMENTS; i++)
+		currBoard.bitboard[i] = 0;
+	
 	
 	// encoded chess board
 	// First half is black, second is white
@@ -107,11 +104,15 @@ localMultiplayer()
 	U64 offset;
 	Board vector, coverage, tempcoverage;
 	bool colour;
+	pgnoutput po = makePGN("1", "White", "Black");
+	FILE *fp = fopen("output.pgn", "w");
 	for(;;) { // strange things are happening 
 LOOP: // works ok to me
 		result = parseInput(&from, &to);
 		switch(result) {
 			case(255):
+				dumpPGN(po, fp);
+				fclose(fp);
 				return; // exit
 			case(0):
 				goto LOOP; // bad input
@@ -162,9 +163,11 @@ SINGLEINPUT:
 		}
 		temp = -1;
 		if (!movePiece(from, to)) goto LOOP;
+
+		currBoard.blackplaying=!currBoard.blackplaying; // switch players
+		appendMovePGN(prevBoard, currBoard, &po, from, to);
 		from = -1;
 		to = -1;
-		currBoard.blackplaying=!currBoard.blackplaying; // switch players
 		if(inCheckMate(currBoard)) {
 			printBoard(currBoard);
 			puts("Checkmate");
@@ -173,12 +176,18 @@ SINGLEINPUT:
 		if(inStaleMate(currBoard)) {
 			printBoard(currBoard);
 			puts("Stalemate");
+			po.header.result = "1/2-1/2";
 			break; // end game
 		}
 		currBoard.blackplaying?puts("\nBlack to play"):puts("\nWhite to play");
 		if(inCheck(currBoard)) puts("Check");
 		printBoard(currBoard);
 	}
+
+
+	dumpPGN(po, fp);
+	fclose(fp);
+
 	return;
 }
 
@@ -408,7 +417,7 @@ parseInput(Coord *from, Coord *to)
 	n1 = fgetc(stdin);
 
 	if (l1 == 0 || n1 == 0) return 0; // didn't read anything in
-	if (l1<'A' || l1>'H' || n1<'1' || n1>'8') return 0;
+	if (!( ((l1>='A') & (l1<='H')) || ((l1>='a') & (l1<='h')) ) || n1<'1' || n1>'8') return 0;
 	if (l1>='a' && l1<='h') l1-=32; // get in proper format
 	n1 -= '1';
 	*from = 7 - l1 + 'A' + n1*8; // convert to the format used internally (0-63)
@@ -422,7 +431,7 @@ parseInput(Coord *from, Coord *to)
 	CLEARSTDIN;
 
 	if (l2 == 0 || n2 == 0) return 1; // partial return 
-	if (l2<'A' || l2>'H' || n2<'1' || n2>'8') return 1; // partial return
+	if (!( ((l2>='A') & (l2<='H')) || ((l2>='a') & (l2<='h')) ) || n2<'1' || n2>'8') return 1; // partial return
 	if (l2>='a' && l2<='h') l2-=32; // get in proper format
 	n2 -= '1';
 	*to = 7 - l2 + 'A' + n2*8; // convert to the format used internally (0-63)
@@ -438,6 +447,8 @@ movePiece(Coord from, Coord to) // works exclusively with the current board
 		destroyBoardstate(newbs);
 		return false;
 	}
+
+	cpyBoardstate(&prevBoard, &currBoard);
 
 	cpyBoardstate(&currBoard, newbs);
 
@@ -507,7 +518,8 @@ fauxMove(Coord from, Coord to, Boardstate bs, Boardstate *nbs)
 				puts("Enter which piece you want (R=1, K=2, B=3, Q=4): ");
 				U8 pieceno;
 PROMOTION:
-				scanf("%c", &pieceno);
+				pieceno = getchar()-'0';
+				getchar();
 				switch(pieceno) {
 					case(rook):
 					case(knight):
