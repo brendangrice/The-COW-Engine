@@ -80,7 +80,6 @@ int peek(struct MoveStack* root)
 	if(isEmpty(root)) return -0;
 	return root->data;
 }
-
 int getSize(struct MoveStack* root)
 {
 	int size = 0;
@@ -91,8 +90,6 @@ int getSize(struct MoveStack* root)
 	}	
 	return size;
 }
-
-
 bool isMoveable(Boardstate bs, int position, char piece, bool isBlack)
 {
 	// given a boardstate, position and piece is the piece able to move?
@@ -156,7 +153,6 @@ bool isMoveable(Boardstate bs, int position, char piece, bool isBlack)
 				!=0
 		);
 }
-
 void printBits(U8 byte) // used in debugging
 {
 	for (int i = 0; i < 8; i++) {
@@ -266,8 +262,6 @@ possibleMoveTo(Boardstate bs, bool isBlack, U8 *from, int size)
 	//debugPrintBoard(vectors);
 	return root;
 }
-
-
 struct MoveStack* 
 moveablePieces(Boardstate bs, bool isBlack)
 {
@@ -343,7 +337,13 @@ Max(float a, float b)
 float
 NegaMax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 {
-	if(inCheckMate(bs) || inStaleMate(bs))
+	if(inStaleMate(bs))
+	{
+		printf("\n stalemate in --> #%d", depth);
+		return calculateAdvantage(bs);
+	}
+		
+	if(inCheckMate(bs))
 	{
 		printf("\n mate in --> #%d", depth);
 		return calculateAdvantage(bs);
@@ -366,23 +366,17 @@ NegaMax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 		
 	float bestMove = -9999;
 
-	
-	
 	for(int f = 0 ; f < sizeof(from); f++)
 	{
-		
 		for(int t = 0 ; t < sizeof(to); t++)
 		{
 			Coord one = from[f];
 			Coord two = to[t];
-			Boardstate *newbs = makeBoardstate(NULL, bs.movementflags, bs.blackplaying); // new boardstate 
-			if(fauxMove(one, two, bs, newbs))
+			Boardstate newbs = makeBoardstate(NULL, bs.movementflags, bs.blackplaying); // new boardstate 
+			if(fauxMove(one, two, bs, &newbs))
 			{
-				Boardstate b = newbs[0];
-				b.blackplaying = !b.blackplaying;
-				free(newbs);
-				//destroyBoardstate(newbs);
-				bestMove = Max(bestMove, -NegaMax(depth-1, b, !isBlack, -beta, -alpha));
+				newbs.blackplaying = !newbs.blackplaying;
+				bestMove = Max(bestMove, -NegaMax(depth-1, newbs, !isBlack, -beta, -alpha));
 				alpha = Max(alpha, bestMove);
 				if(beta <= alpha)
 				{
@@ -579,16 +573,7 @@ calculateBestMove(Boardstate bs, bool isBlack, int depth, Coord *coord1, Coord *
 	U8 from [getSize(availablePieces)]; // array that will hold the squares that can be moved from
 	int i = 0;
 	// while from pieces exist assign to from array
-	while(!isEmpty(availablePieces))
-	{
-		from[i++] = pop(&availablePieces);
-	}
-	//printf("\nprinting out the array of from positions = [");
-	//for(int j = 0 ; j < sizeof(from); j++)
-	//{
-	//	printf("%d ", from[j]);
-	//}
-	//printf("]\n");
+	while(!isEmpty(availablePieces)) from[i++] = pop(&availablePieces);
 	// free memory
 	free(availablePieces);
 	// get the squares that player can move to
@@ -596,20 +581,9 @@ calculateBestMove(Boardstate bs, bool isBlack, int depth, Coord *coord1, Coord *
 	U8 to [getSize(toSquares)]; // create array to store these squares that they can move to
 	int x = 0;
 	// while there are squares that they can move to, assign to to array
-	while(!isEmpty(toSquares))
-	{
-		to[x++] = pop(&toSquares);
-	}
-	//printf("\nprinting out the array of to positions = [");
-	//for(int j = 0 ; j < sizeof(to); j++)
-	//{
-	//	printf("%d ", to[j]);
-	//}
-	//printf("]\n");
+	while(!isEmpty(toSquares)) to[x++] = pop(&toSquares);
 	// free memory
 	free(toSquares);
-	//printf("\nFinished subsetting");
-	
 	
 	// store the best move that it can make
 	Coord best1 = 'a'; 
@@ -624,16 +598,12 @@ calculateBestMove(Boardstate bs, bool isBlack, int depth, Coord *coord1, Coord *
 		{
 			Coord one = from[f];
 			Coord two = to[t];
-			//Boardstate newbs;
-			Boardstate *newbs = makeBoardstate(NULL, bs.movementflags, bs.blackplaying); // new boardstate 
-			if(fauxMove(one, two, bs, newbs))
+			Boardstate newbs = makeBoardstate(NULL, bs.movementflags, bs.blackplaying); // new boardstate 
+			
+			if(fauxMove(one, two, bs, &newbs))
 			{
-				Boardstate b = newbs[0];
-				free(newbs);
-				//destroyBoardstate(newbs);
-				b.blackplaying = !b.blackplaying;
-				float newAdvantage = -NegaMax(depth-1, b, !isBlack, -10000, 10000);
-				//float newAdvantage = minimax(depth-1, newbs, !isBlack, -10000, 10000);
+				newbs.blackplaying = !newbs.blackplaying;
+				float newAdvantage = -NegaMax(depth-1, newbs, !isBlack, -10000, 10000);
 				if(newAdvantage > bestScore)
 				{
 					//printf("\nadvantage = %.3f (%d %d)", newAdvantage, one, two);

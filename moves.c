@@ -3,7 +3,7 @@
 //TODO COMBINE PAWNMOVEMENT AND ATTACK, MAKING THEM WORK OFF ONE FUNCTION BASED ON COLOUR
 
 U8
-whitePawnMovement(Coord from, Coord to, Boardstate bs, Board *vector) //returning early not making whole vector
+whitePawnMovement(Coord from, Coord to, Boardstate bs, Board *vector)
 {
 	Board extra;
 	if (vector==NULL) vector = &extra;
