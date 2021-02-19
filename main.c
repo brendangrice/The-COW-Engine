@@ -61,35 +61,26 @@ main()
 	}
 }
 
-Boardstate *
+Boardstate
 makeBoardstate(Board *bitboard, U8 movementflags, bool blackplaying)
 {
-	Boardstate *newbs = malloc(BOARDSTATESIZE);
-	newbs->bitboard = malloc(BITBOARDSIZE);
-	newbs->bitboard = memset(newbs->bitboard, 0, BITBOARDSIZE);
-	if (bitboard!=NULL) memcpy(newbs->bitboard, bitboard, BITBOARDSIZE);
-	newbs->movementflags = movementflags;
-	newbs->blackplaying = blackplaying;
+	Boardstate newbs;
+	newbs.bitboard = malloc(BITBOARDSIZE);
+	newbs.bitboard = memset(newbs.bitboard, 0, BITBOARDSIZE);
+	if (bitboard!=NULL) memcpy(newbs.bitboard, bitboard, BITBOARDSIZE);
+	newbs.movementflags = movementflags;
+	newbs.blackplaying = blackplaying;
 	
 	return newbs;
 }
 
 Boardstate *
-cpyBoardstate(Boardstate *to, Boardstate *from)
+cpyBoardstate(Boardstate *to, Boardstate from)
 {
-		to->bitboard = memcpy(to->bitboard, from->bitboard, BITBOARDSIZE);
-		to->movementflags = from->movementflags;
-		to->blackplaying = from->blackplaying;
+		to->bitboard = memcpy(to->bitboard, from.bitboard, BITBOARDSIZE);
+		to->movementflags = from.movementflags;
+		to->blackplaying = from.blackplaying;
 		return to;
-}
-
-void
-destroyBoardstate(Boardstate *bs)
-{
-	free(bs->bitboard);
-	bs->bitboard = NULL;
-	free(bs);
-	bs = NULL;
 }
 
 void
@@ -276,25 +267,25 @@ parseInput(Coord *coord1, Coord *coord2)
 bool 
 movePiece(Coord from, Coord to) // works exclusively with the current board
 {
-	Boardstate *newbs = makeBoardstate(NULL, 0, 0); // new boardstate
-	if (!fauxMove(from, to, currBoard, newbs)) {
-		destroyBoardstate(newbs);
+	Boardstate newbs = makeBoardstate(NULL, 0, 0); // new boardstate
+	if (!fauxMove(from, to, currBoard, &newbs)) {
+		free(newbs.bitboard);
 		return false;
 	}
 
 	cpyBoardstate(&currBoard, newbs);
 
-	destroyBoardstate(newbs);
+	free(newbs.bitboard);
 	return true;
 }
 
-#define FAUXMOVERET(A, B) {destroyBoardstate(A); return B;}
+#define FAUXMOVERET(A, B) {free(A.bitboard); return B;}
 bool
 fauxMove(Coord from, Coord to, Boardstate bs, Boardstate *nbs)
 {
-	Boardstate *extra = makeBoardstate(NULL, 0, 0); // new boardstate
-	if (nbs==NULL) nbs = extra;
-	nbs = cpyBoardstate(nbs, &bs);
+	Boardstate extra = makeBoardstate(NULL, 0, 0); // new boardstate
+	if (nbs==NULL) nbs = &extra;
+	nbs = cpyBoardstate(nbs, bs);
 
 	Coord frompiece, topiece, passantpiece;
 	bool fromcolourblack, tocolourblack, passantcolourblack;
@@ -517,20 +508,7 @@ inCheckMate(Boardstate bs)
 
 	Board kingb = bs.bitboard[king]&pieces;
 	
-	Coord kingc = btoc(kingb);
-	/*
-	bool test = false; // check if king can move out of check, most common way of moving out of mate, faster to try the king first
-	test |= fauxMove(kingc, kingc+9, bs, NULL); // if the piece can move its not a check
-	test |= fauxMove(kingc, kingc+8, bs, NULL);
-	test |= fauxMove(kingc, kingc+7, bs, NULL);
-	test |= fauxMove(kingc, kingc+1, bs, NULL);
-	test |= fauxMove(kingc, kingc-1, bs, NULL);
-	test |= fauxMove(kingc, kingc-7, bs, NULL);
-	test |= fauxMove(kingc, kingc-8, bs, NULL);
-	test |= fauxMove(kingc, kingc-9, bs, NULL);
-	if (test) return 1; // not checkmate if king can move out of check
-	*/
-	//check if any other piece can move to block
+	Coord kingc = btoc(kingb); // position of the king
 	
 	Board vectors = queenAttackVectors(kingc, bs.bitboard) | knightAttackVectors(kingc); // every position that can be attacking the king
 
