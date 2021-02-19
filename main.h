@@ -55,6 +55,7 @@ void localAI(); // function for running the ai
 void localMultiplayer(); // function for running the multiplayer
 Board calculateAttackVectors(Board *bitboard, bool blackplaying); //returns an attack vector for a colour on given board
 void printBoard(Boardstate bs); // parameter determines which way the board prints
+void printFEN(Boardstate bs, Coord from,Coord to); // print FEN of given Boardstate, Coord used for en passent
 bool parseInput(Coord *from, Coord *to); //reads input and gives from and to as coordinates (0-63)
 bool movePiece(Coord from, Coord to); // returns true if the piece moved from [from] to [to], colour of the piece (players turn) needs to be given
 bool fauxMove(Coord from, Coord to, Boardstate bs, Boardstate *nbs); // returns a board nbs as if the move had been executed, if its an illegal move the given Boardstate is returned.

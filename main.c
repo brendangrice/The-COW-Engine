@@ -4,7 +4,7 @@
 // alongside all the other pieces and movements with one or.
 // REMEMBER TO CHECK ALL THE FREE'S
 ////
-                                  
+
 Boardstate currBoard;
 
 void
@@ -143,6 +143,7 @@ localMultiplayer()
 {
 	puts("White to play");
 	printBoard(currBoard);
+	printFEN(currBoard, -1, -1);
 	// user input
 	// every time the user inputs a new move the attack vectors need to be reevaluated.
 	bool test;
@@ -156,17 +157,20 @@ LOOP: // works ok to me
 		currBoard.blackplaying=!currBoard.blackplaying; // switch players
 		if(inCheckMate(currBoard)) {
 			printBoard(currBoard);
+			printFEN(currBoard, from, to);
 			puts("Checkmate");
 			break; // end game
 		}
 		if(inStaleMate(currBoard)) {
 			printBoard(currBoard);
+			printFEN(currBoard, from, to);
 			puts("Stalemate");
 			break; // end game
 		}
 		currBoard.blackplaying?puts("\nBlack to play"):puts("\nWhite to play");
 		if(inCheck(currBoard)) puts("Check");
 		printBoard(currBoard);
+		printFEN(currBoard, from, to);
 	}
 	return;
 }
@@ -270,6 +274,108 @@ printBits(U8 byte) // used in debugging
 	putchar('\n');
 }
 #endif
+
+void printFEN(Boardstate bs, Coord from, Coord to)
+{
+	int blank = 0;
+	int j = 0;	
+	// Piece Placement
+	for (int i = 63; i>=0; i--) {		
+		if (!((i+1)%8))  // is in a new rank
+		{
+			blank = 0; // ensure that the blank count is zero at start of new rank
+			if(i!=63)putchar('/'); // denote rank seperation with "/"
+			if(findPiece(i, NULL, NULL, bs.bitboard) == '.') // if it is blank
+			{
+				j = i; // starting where i is positioned
+				// while the character is blank
+				while(findPiece(j, NULL, NULL, bs.bitboard) == '.')
+				{
+					blank++; // increment the count of blank characters
+					j--; // decrement the position
+					if(!((j+1)%8)) // going to enter a new rank, so break out of this
+					{
+						j++;
+						break;
+					}
+				}
+				// found a non blank characters
+				i = j; // move the main position to where j left off to avoid double counting
+				printf("%d", blank);
+				if(((j)%8))
+					putchar(findPiece(j, NULL, NULL, bs.bitboard));
+				blank = 0;
+			}
+			else // otherwise it is not blank
+			{
+				putchar(findPiece(i, NULL, NULL, bs.bitboard));
+			}
+		}
+		else // it is not a new rank
+		{
+			if(findPiece(i, NULL, NULL, bs.bitboard) == '.') // if it is blank
+			{
+				if(findPiece(i, NULL, NULL, bs.bitboard) == '.') // if it is blank
+				{
+					j = i; // starting where i is positioned
+					// while the character is blank
+					while(findPiece(j, NULL, NULL, bs.bitboard) == '.')
+					{
+						blank++; // increment the count of blank characters
+						j--; // decrement the position
+						if(!((j+1)%8)) // going to enter a new rank, so break out of this
+						{
+							j++;
+							break;
+						}
+					}
+					// found a non blank characters
+					i = j; // move the main position to where j left off to avoid double counting
+					printf("%d", blank);
+					if(((j-1)%8) && findPiece(j, NULL, NULL, bs.bitboard) != '.')
+						putchar(findPiece(j, NULL, NULL, bs.bitboard));
+					blank = 0;
+				}
+			}
+			else // otherwise it is not blank
+			{
+				putchar(findPiece(i, NULL, NULL, bs.bitboard));
+			}
+		}
+	}
+
+	// Side to move
+	putchar(' ');
+	bs.blackplaying ? (putchar('b')):(putchar('w'));
+	
+	// Castling flags
+	putchar(' ');
+	if(bs.movementflags&0x80) printf("K");
+	if(bs.movementflags&0x40) printf("Q");
+	if(bs.movementflags&0x20) printf("k");
+	if(bs.movementflags&0x10) printf("q");
+	
+	// En passant target square
+	if(bs.blackplaying && ((from+16) == to) && (findPiece(to, NULL, NULL, bs.bitboard) == 'P'))
+	{
+		printf(" %c%d", ('h'-(to&7)), ((to>>3)+1) - 1);
+	}
+	else if(((from-16) == to) && (findPiece(to, NULL, NULL, bs.bitboard) == 'p'))
+	{
+		printf(" %c%d", ('h'-(to&7)), ((to>>3)+1) + 1);
+	}
+	else
+	{
+		printf(" -");
+	}
+	// TODO make these do something, hardcoded at the moment, so that it will still work in FEN viewers
+	// halfmove clock
+	printf(" 0");
+	// fullmove clock
+	printf(" 1");
+	printf("\n");
+}
+
 
 void
 printBoard(Boardstate bs)

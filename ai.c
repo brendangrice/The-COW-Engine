@@ -2,6 +2,8 @@
 #include "main.h"
 #include "ai.h"
 //int iter = 0;
+
+/*
 struct Node
 {
 	Boardstate boardstate; // each node has a boardstate
@@ -39,7 +41,7 @@ void traverseTree(struct Node *root)
 		root = root->next;
 	}
 }
-
+*/
 
 // Stack of linked lists
 struct MoveStack{
