@@ -10,6 +10,9 @@
 #include "eval.h"
 #include "ai.h"
 
+#include "tt.h"
+
+
 // Should attack boards be tracked like this
 // when they need to constantly be re-evaluated anyways?
 // mostly used for debugging

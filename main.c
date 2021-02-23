@@ -4,12 +4,12 @@
 // alongside all the other pieces and movements with one or.
 // REMEMBER TO CHECK ALL THE FREE'S
 ////
-
 Boardstate currBoard;
-
 void
 setBitBoard()
 {
+	
+	initHash();
 	currBoard.movementflags=0xF0; // set castling to be available for both players
 	currBoard.blackplaying = false; // game starts with white
 	currBoard.bitboard = malloc(BITBOARDSIZE);
@@ -34,7 +34,7 @@ int
 main() 
 {
 	setBitBoard();
-
+	
 	char c; // input
 	while (1) {
 
@@ -85,17 +85,6 @@ cpyBoardstate(Boardstate *to, Boardstate from)
 		return to;
 }
 
-/*void
-<<<<<<< HEAD
-destroyBoardstate(Boardstate *bs)
-{
-	free(bs->bitboard);
-	bs->bitboard = NULL;
-	free(bs);
-	bs = NULL;
-}
-*/
-
 void
 localAI()
 {
@@ -141,12 +130,12 @@ LOOP: // works ok to me
 }
 
 void
-//=======
-//>>>>>>> c238bfd5a85efc455dd84cee97c0565a0b4f702e
 localMultiplayer()
 {
 	puts("White to play");
 	printBoard(currBoard);
+	U64 key = generateHash(currBoard, -1);
+	printf("\nKey : %llx\n", key);
 	printFEN(currBoard, -1, -1);
 	// user input
 	// every time the user inputs a new move the attack vectors need to be reevaluated.
@@ -175,6 +164,8 @@ LOOP: // works ok to me
 		if(inCheck(currBoard)) puts("Check");
 		printBoard(currBoard);
 		printFEN(currBoard, from, to);
+		key = generateHash(currBoard, to);
+		printf("\nKey : %llx\n", key);
 	}
 	return;
 }
@@ -405,6 +396,7 @@ printBoard(Boardstate bs)
 		}
 		puts("\n\n% ABCDEFGH\n");
 	}
+	puts("\n");
 }
 
 bool
@@ -448,7 +440,6 @@ movePiece(Coord from, Coord to) // works exclusively with the current board
 bool
 fauxMove(Coord from, Coord to, Boardstate bs, Boardstate *nbs)
 {
-	
 	Boardstate extra = makeBoardstate(NULL, 0, 0); // new boardstate
 	if (nbs==NULL) nbs = &extra;
 	nbs = cpyBoardstate(nbs, bs);
