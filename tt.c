@@ -1,18 +1,28 @@
 #include "tt.h"
 #include "ai.h"
+
 // Zobrist hashing - unique identifier key of the gamestate used for transposition table tt
 
 // init array of pseudorandom numbers
 
-// one number for each peice at each square 							12x16
-// one number to indicate if black to move								1
-// four numbers to indicate castling rights 							4 
-// eight numbers to indicate the file of a valid en passant square 		8 
-// == 																	781 RANDOM NUMBERS
+// one number for each peice at each square 
+// one number to indicate if black to move								
+// four numbers to indicate castling rights 							
+// eight numbers to indicate the file of a valid en passant square 		
+													
+// 12x16 + 1 + 4 + 8 == 781 RANDOM NUMBERS for init
 
 // pseudorandom https://en.wikipedia.org/wiki/Xorshift
+
 unsigned int seed = 1804289383;
-unsigned int randU32()
+U64 key = 0ULL;
+U64 piece_key[12][64];
+U64 move_key;
+U64 castle_key[4];
+U64 enpassant_key[8];
+
+unsigned int 
+randU32()
 {
 	unsigned int number = seed;
 	number ^= number << 13;
@@ -23,7 +33,8 @@ unsigned int randU32()
 	
 	return number;
 }
-U64 randU64()
+U64 
+randU64()
 {
 	U64 u1, u2, u3, u4;
 	u1 = (U64)(randU32())&0xFFFF;
@@ -33,15 +44,8 @@ U64 randU64()
 	
 	return u1|(u2<<16)|(u3<<32)|(u4<<48);
 }
-
-
-U64 piece_key[12][64];
-U64 move_key;
-U64 castle_key[4];
-U64 enpassant_key[8];
-
-
-void initHash()
+void 
+initHash()
 {
 	seed = 1804289383;
 	// pieces on squares
@@ -57,16 +61,16 @@ void initHash()
 	// move key
 	move_key = randU64();
 }
-
-static inline int getLeastBitIndex(Board b)
+static inline int 
+getLeastBitIndex(Board b)
 {
 	if(b) return numberOfBits((b&-b)-1);
 	return -1;
 }
-
-U64 generateHash(Boardstate bs, Coord to)
+U64 
+generateHash(Boardstate bs, Coord to)
 {
-	U64 key = 0ULL;
+	key = 0ULL;
 	Board board;
 	// calculate positional key influence
 	for(int piece = 0 ; piece < 12; piece++)
@@ -100,3 +104,72 @@ U64 generateHash(Boardstate bs, Coord to)
 	}
 	return key;
 }
+
+
+TransitionTable hash_table[hash_size]; // global transition table
+
+void
+TTclear()
+{
+	printf("\nclearing table");
+	for(int i = 0 ; i < hash_size; i++)
+	{
+		hash_table[i].key = 0;
+		hash_table[i].depth = 0;
+		hash_table[i].flag = 0;
+		hash_table[i].score = 0;
+	}
+}
+//static inline int 
+float
+TTread(int alpha, int beta, int depth)
+{
+	// create pointer to entry
+	TransitionTable *entry = &hash_table[key % hash_size];
+	// ensure correct position
+	if(entry->key == key)
+	{
+		// ensure same depth
+		if(entry->depth >= depth)
+		{
+			// if the score is the same
+			if(entry->flag == hash_flag_exact)
+			{
+				//printf("\n SCORE EXACT %.3f", entry->score);
+				return entry->score;
+			}
+			// if the score is alpha
+			if((entry->flag == hash_flag_alpha)&&(entry->score <= alpha))
+			{
+				//printf("\n SCORE ALPHA");
+				return alpha;
+			}
+			// if the score is beta
+			if((entry->flag == hash_flag_beta)&&(entry->score >= beta))
+			{
+				//printf("\n SCORE BETA");
+				return beta;
+			}
+		}
+	}
+	//printf("\nEntry does not exist");
+	return no_hash_entry;
+}
+//static inline void
+void
+TTwrite(int score, int depth, int flag)
+{
+	TransitionTable *entry = &hash_table[key%hash_size];
+	entry->key = key;
+	entry->score = score;
+	entry->flag = flag;
+	entry->depth = depth;
+}
+
+
+
+
+
+
+
+

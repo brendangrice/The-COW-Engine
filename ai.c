@@ -1,6 +1,7 @@
 #include "eval.h"
 #include "main.h"
 #include "ai.h"
+#include <time.h>
 //int iter = 0;
 
 /*
@@ -337,22 +338,32 @@ Max(float a, float b)
 float
 NegaMax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 {
-	if(inStaleMate(bs))
+	/*if(inStaleMate(bs))
 	{
-		printf("\n stalemate in --> #%d", depth);
+		//printf("\n stalemate in --> #%d", depth);
+		//printf("\n stalemate in --> #%d", depth);
 		return calculateAdvantage(bs);
 	}
 		
 	if(inCheckMate(bs))
 	{
-		printf("\n mate in --> #%d", depth);
+		//printf("\n mate in --> #%d", depth);
+		//printf("\n mate in --> #%d", depth);
 		return calculateAdvantage(bs);
 	}
+	*/
+	float score;
+	// if it exists
+	//if((score = TTread(alpha, beta, depth)) != no_hash_entry)
+	//{
+	//	return score; // return it
+	//	return calculateAdvantage(bs);
+	//}
 	if(depth == 0) return calculateAdvantage(bs);
-	
+	float alphaOrig = alpha;
+	int flag = hash_flag_alpha;
 	int i = 0;
-	int x = 0;
-	int attempts = 0;
+	int x = 0;	
 
 	// get a stack of available pieces to move
 	struct MoveStack* availablePieces = moveablePieces(bs, isBlack);
@@ -378,7 +389,7 @@ NegaMax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 				newbs.blackplaying = !newbs.blackplaying;
 				bestMove = Max(bestMove, -NegaMax(depth-1, newbs, !isBlack, -beta, -alpha));
 				alpha = Max(alpha, bestMove);
-				if(beta <= alpha)
+				if(alpha >= beta)
 				{
 					return alpha;
 				}
@@ -428,6 +439,21 @@ NegaMax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 		}
 	}
 	*/
+	//https://en.wikipedia.org/wiki/Negamax#Negamax_with_alpha_beta_pruning_and_transposition_tables
+	if(bestMove <= alphaOrig)
+	{
+		flag = hash_flag_alpha;
+	}
+	else if(bestMove >= beta)
+	{
+		flag = hash_flag_beta;
+	}
+	else
+	{
+		flag = hash_flag_exact;
+	}
+	TTwrite(bestMove, depth, flag);
+	//printf("\nadding position to the tt");
 	return bestMove;
 }
 
@@ -568,6 +594,9 @@ minimax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 bool
 calculateBestMove(Boardstate bs, bool isBlack, int depth, Coord *coord1, Coord *coord2)
 {
+	int msec = 0;
+	clock_t before = clock();
+	
 	// get a stack of available pieces to move
 	struct MoveStack* availablePieces = moveablePieces(bs, isBlack);
 	U8 from [getSize(availablePieces)]; // array that will hold the squares that can be moved from
@@ -590,7 +619,7 @@ calculateBestMove(Boardstate bs, bool isBlack, int depth, Coord *coord1, Coord *
 	Coord best2 = 'a';
 	// track the best score of the game
 	float bestScore = -9999.0;
-	int attempts = 0; // try for a number of successful moves that improve position
+	//int attempts = 0; // try for a number of successful moves that improve position
 	
 	for(int f = 0 ; f < sizeof(from); f++)
 	{
@@ -649,6 +678,9 @@ calculateBestMove(Boardstate bs, bool isBlack, int depth, Coord *coord1, Coord *
 	
 	//printf("\nThe best move to make is (%d %d) @ %.3f", best1, best2, bestScore);
 	printf("\n>Hmmmmm. . . \n>Im going to play (%d %d)\n", best1, best2);
+	clock_t after = clock() - before;;
+	printf("Time taken %d ",after);
+	
 	//printf("\nitter = %d", iter);
 	*coord1 = best1;
 	*coord2 = best2;

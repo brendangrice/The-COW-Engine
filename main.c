@@ -34,7 +34,7 @@ int
 main() 
 {
 	setBitBoard();
-	
+	TTclear();
 	char c; // input
 	while (1) {
 
@@ -102,7 +102,7 @@ LOOP: // works ok to me
 			test = parseInput(&from, &to); //take their input
 		}
 		else{ // otherwise let the bot play
-			test = calculateBestMove(currBoard, currBoard.blackplaying, 3, &from, &to);			
+			test = calculateBestMove(currBoard, currBoard.blackplaying, 5, &from, &to);			
 		}
 		
 		if (!test) goto LOOP;
@@ -135,7 +135,7 @@ localMultiplayer()
 	puts("White to play");
 	printBoard(currBoard);
 	U64 key = generateHash(currBoard, -1);
-	printf("\nKey : %llx\n", key);
+	printf("\nKey : %llx	\n", key);
 	printFEN(currBoard, -1, -1);
 	// user input
 	// every time the user inputs a new move the attack vectors need to be reevaluated.
