@@ -89,7 +89,8 @@ void
 localAI()
 {
 	puts("White to play");
-	printBoard(currBoard);
+	//printBoard(currBoard);
+	prettyPrintBoard(currBoard);
 	// user input
 	// every time the user inputs a new move the attack vectors need to be reevaluated.
 	bool test;
@@ -102,7 +103,7 @@ LOOP: // works ok to me
 			test = parseInput(&from, &to); //take their input
 		}
 		else{ // otherwise let the bot play
-			test = calculateBestMove(currBoard, currBoard.blackplaying, 5, &from, &to);			
+			test = calculateBestMove(currBoard, currBoard.blackplaying, 3, &from, &to);			
 		}
 		
 		if (!test) goto LOOP;
@@ -112,19 +113,22 @@ LOOP: // works ok to me
 		currBoard.blackplaying=!currBoard.blackplaying; // switch players
 		
 		if(inCheckMate(currBoard)) {
-			printBoard(currBoard);
+			//printBoard(currBoard);
+			prettyPrintBoard(currBoard);
 			puts("Checkmate");
 			break; // end game
 		}
 		
 		if(inStaleMate(currBoard)) {
-			printBoard(currBoard);
+			//printBoard(currBoard);
+			prettyPrintBoard(currBoard);
 			puts("Stalemate");
 			break; // end game
 		}
 		currBoard.blackplaying?puts("\nBlack to play"):puts("\nWhite to play");
 		if(inCheck(currBoard)) puts("Check");
-		printBoard(currBoard);
+		//printBoard(currBoard);
+		prettyPrintBoard(currBoard);
 	}
 	return;
 }
@@ -372,6 +376,77 @@ void printFEN(Boardstate bs, Coord from, Coord to)
 }
 
 
+void prettyPrintBoard(Boardstate bs)
+{
+	/*
+		  +---+---+---+---+---+---+---+---+
+		8 | r |   | b | q | k | b | n | r |
+		  +---+---+---+---+---+---+---+---+
+		7 | p | p | p | p | p | p | p | p |
+	 	  +---+---+---+---+---+---+---+---+
+		6 |   |   | n |   |   |   |   |   |
+		  +---+---+---+---+---+---+---+---+
+		5 |   |   |   |   |   |   |   |   |
+		  +---+---+---+---+---+---+---+---+
+		4 |   |   |   |   | P |   |   |   |
+		  +---+---+---+---+---+---+---+---+
+		3 |   |   |   |   |   |   |   |   |
+		  +---+---+---+---+---+---+---+---+
+		2 | P | P | P | P |   | P | P | P |
+		  +---+---+---+---+---+---+---+---+
+		1 | R | N | B | Q | K | B | N | R |
+		  +---+---+---+---+---+---+---+---+
+			A   B   C   D   E   F   G   H
+	*/
+	if(bs.blackplaying)
+	{
+		bool change = false;
+		printf("\n   +---+---+---+---+---+---+---+---+");
+		for(int i = 0 ; i < 64; i++)
+		{
+			if(!(i%8))
+			{
+				printf("\n %c |",'1'+(i/8));
+				change = !change;
+				for(int j = i; j < i+8; j++)
+				{
+					char c = findPiece(j, NULL, NULL, bs.bitboard);
+					if(c == '.') c = ' '; 
+					change ? 
+						printf(" %c |", c): 
+						printf(" %c |", c); // maybe shade the dark squares in the future?
+					change = !change;
+				}				
+				printf("\n   +---+---+---+---+---+---+---+---+");	
+			}
+		}
+		printf("\n     H   G   F   E   D   C   B   A  \n");
+	}
+	else
+	{
+		bool change = false;
+		printf("\n   +---+---+---+---+---+---+---+---+");
+		for(int i = 0 ; i < 64; i++)
+		{
+			if(!(i%8))
+			{
+				printf("\n %c |",'8'-(i/8));
+				change = !change;
+				for(int j = i; j < i+8; j++)
+				{
+					char c = findPiece(63-j, NULL, NULL, bs.bitboard);
+					if(c == '.') c = ' '; 
+					change ? 
+						printf(" %c |", c): 
+						printf(" %c |", c); // maybe shade the dark squares in the future?
+					change = !change;
+				}				
+				printf("\n   +---+---+---+---+---+---+---+---+");	
+			}
+		}
+		printf("\n     A   B   C   D   E   F   G   H  \n");
+	}
+}
 void
 printBoard(Boardstate bs)
 {

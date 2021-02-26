@@ -55,6 +55,7 @@ Boardstate *cpyBoardstate(Boardstate *to, Boardstate from); // copies data acros
 void localAI(); // function for running the ai
 void localMultiplayer(); // function for running the multiplayer
 Board calculateAttackVectors(Board *bitboard, bool blackplaying); //returns an attack vector for a colour on given board
+void prettyPrintBoard(Boardstate bs); // print large board with defined squares
 void printBoard(Boardstate bs); // parameter determines which way the board prints
 void printFEN(Boardstate bs, Coord from,Coord to); // print FEN of given Boardstate, Coord used for en passent
 bool parseInput(Coord *from, Coord *to); //reads input and gives from and to as coordinates (0-63)
