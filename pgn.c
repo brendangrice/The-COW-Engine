@@ -11,6 +11,12 @@
 // [Black ""]
 // [Result ""]
 
+inline char *strrep(char *s, char pre, char post)
+{
+	for (int i=0; i<strlen(s); i++) if (s[i]==pre) s[i]=post;
+	return s;
+}
+
 
 pgnoutput
 makePGN(char *round, char *white, char *black)
@@ -18,18 +24,28 @@ makePGN(char *round, char *white, char *black)
 	pgnoutput po;
 	po.header.event = "Casual Game";
 	po.header.site = "https://github.com/brendangrice/The-COW-Engine"; // append timezone?
-	char s[64];
+	char *date = malloc(11);
+	char *starttime = malloc(9);
 	time_t t = time(NULL);
 	struct tm *tm = localtime(&t);
-	strftime(s, 64, "%c", tm); // format this correctly
-	po.header.date = s;
+	strftime(date, 11, "%F", tm);
+	strrep(date, '-', '.');
+	po.header.date = date;
 	po.header.round = round;
 	po.header.white = white;
 	po.header.black = black;
 	po.header.result = "*";
-	strftime(s, 64, "%c", tm); // format this correctly
-	po.header.time = s;
+	strftime(starttime, 11, "%T", tm);
+	po.header.time = starttime; // this needs to be formatted
 	memset(po.pgn, 0, PGNSTRINGSIZE); // set for concating
+	char f[30];
+	strncat(f, "pgn/", 5);
+	strncat(f, date, strlen(date)+1);
+	strncat(f, "_", 2);
+	strncat(f, starttime, strlen(starttime)+1);
+	strncat(f, ".pgn", 5);
+	strrep(f, ':', '.');
+	po.fp = fopen(f, "w");
 	return po;
 }
 
@@ -96,10 +112,6 @@ appendMovePGN(Boardstate pre, Boardstate post, pgnoutput *po, Coord from, Coord 
 		if (inCheckMate(post)) {
 			*s++='#';
 			*s = ' ';
-			strncat(po->pgn, str, stringsize); // copy the new movement to the pgn output
-			po->header.result = post.blackplaying?"0-1":"1-0";
-			strncat(po->pgn, po->header.result, 4); // append the result
-			return true;
 		} else {
 			*s++='+';
 		}
@@ -112,21 +124,31 @@ appendMovePGN(Boardstate pre, Boardstate post, pgnoutput *po, Coord from, Coord 
 }
 
 bool
-dumpPGN(pgnoutput po, FILE *fp)
+dumpPGN(Boardstate bs, pgnoutput po)
 {
-	fprintf(fp, "[Event \"%s\"]\n", po.header.event);
-	fprintf(fp, "[Site \"%s\"]\n", po.header.site);
-	fprintf(fp, "[Date \"%s\"]\n", po.header.date);
-	fprintf(fp, "[Round \"%s\"]\n", po.header.round);
-	fprintf(fp, "[White \"%s\"]\n", po.header.white);
-	fprintf(fp, "[Black \"%s\"]\n", po.header.black);
-	fprintf(fp, "[Result \"%s\"]\n", po.header.result);
+	fprintf(po.fp, "[Event \"%s\"]\n", po.header.event);
+	fprintf(po.fp, "[Site \"%s\"]\n", po.header.site);
+	fprintf(po.fp, "[Date \"%s\"]\n", po.header.date);
+	fprintf(po.fp, "[Round \"%s\"]\n", po.header.round);
+	fprintf(po.fp, "[White \"%s\"]\n", po.header.white);
+	fprintf(po.fp, "[Black \"%s\"]\n", po.header.black);
+	fprintf(po.fp, "[Result \"%s\"]\n", po.header.result);
 
-	fprintf(fp, "[Time \"%s\"]\n", po.header.time);
+	fprintf(po.fp, "[Time \"%s\"]\n", po.header.time);
 
-	fputs(po.pgn, fp);
+	if (inCheck(bs)) {
+		if (inCheckMate(bs)) po.header.result = bs.blackplaying?"0-1":"1-0";
+	} else 	if (inStaleMate(bs)) po.header.result = "1/2-1/2";
+
+	strncat(po.pgn, po.header.result, 8); // append the result
+
+	fputs(po.pgn, po.fp);
+	fclose(po.fp);
+	free(po.header.date);
+	free(po.header.time);
 	return true;
 }
+
 // format
 // [Event "Casual Game"]
 // [Site "The COW Engine"]

@@ -23,6 +23,7 @@ typedef struct {
 typedef struct {
 	pgnheader header;
 	char pgn[PGNSTRINGSIZE];
+	FILE *fp;
 } pgnoutput;
 
 
@@ -36,8 +37,9 @@ typedef struct {
 // [Time ""]
 
 
+char *strrep(char *s, char pre, char post);
 pgnoutput makePGN(char *round, char *white, char *black);
 bool appendMovePGN(Boardstate pre, Boardstate post, pgnoutput *po, Coord from, Coord to);
-bool dumpPGN(pgnoutput po, FILE *fp);
+bool dumpPGN(Boardstate bs, pgnoutput po);
 
 #endif //PGN_H

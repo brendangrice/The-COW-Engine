@@ -1,16 +1,27 @@
 #include "main.h"
 
-#define CLEARSTDIN while((c=fgetc(stdin)) != EOF && c != '\n');
 
 Boardstate currBoard;
 Boardstate prevBoard;
+
+#define _ nopiece
+const U8 ltoe[] = {
+	_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+	_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+	_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+	_, _, _, _, _, _, bishop, _, _, _, _, _, _, _, _, king, _, _, knight, _, 
+	pawn, queen, rook, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, bishop, _,
+       	_, _, _, _, _, _, _, king, _, _, knight, _, pawn, queen, rook
+
+};
+#undef _
 
 int 
 main() 
 {
 	setBitBoard();
 
-	char c, inp; // input
+	char inp[2]; // input
 	while (1) {
 
 		setBitBoard();
@@ -18,19 +29,17 @@ main()
 		puts("Local multiplayer: 1");
 		puts("Quit: q");
 		
-		inp = fgetc(stdin);
-		if (inp==EOF) break; //exit
-		CLEARSTDIN;
-		switch(inp) {
+		readInput(inp, 2);
+		switch(*inp) {
 			case('1'):
-				localMultiplayer();
+				localMultiplayer(&currBoard, &prevBoard);
 				break;
 			case('q'):
 			case('Q'):
 				return 0;
 				break;
 			default:
-				fputs("Bad Input", stdout);
+				puts("Bad Input");
 				break;
 		}
 
@@ -40,16 +49,9 @@ main()
 void
 setBitBoard()
 {
-	currBoard.movementflags=0xF0; // set castling to be available for both players
-	currBoard.blackplaying = false; // game starts with white
-	currBoard.bitboard = malloc(BITBOARDSIZE);
+	prevBoard = makeBoardstate(NULL, 0xF0, false);
+	currBoard = makeBoardstate(NULL, 0xF0, false);
 
-	prevBoard.bitboard = malloc(BITBOARDSIZE);
-
-	for (int i = 0; i < BITBOARDELEMENTS; i++)
-		currBoard.bitboard[i] = 0;
-	
-	
 	// encoded chess board
 	// First half is black, second is white
 	currBoard.bitboard[pawn] = 0x00FF00000000FF00;
@@ -62,133 +64,26 @@ setBitBoard()
 	currBoard.bitboard[total] = currBoard.bitboard[pawn]|currBoard.bitboard[rook]|currBoard.bitboard[knight]|currBoard.bitboard[bishop]|currBoard.bitboard[queen]|currBoard.bitboard[king];
 }
 
-Boardstate *
+Boardstate
 makeBoardstate(Board *bitboard, U8 movementflags, bool blackplaying)
 {
-	Boardstate *newbs = malloc(BOARDSTATESIZE);
-	newbs->bitboard = malloc(BITBOARDSIZE);
-	newbs->bitboard = memset(newbs->bitboard, 0, BITBOARDSIZE);
-	if (bitboard!=NULL) memcpy(newbs->bitboard, bitboard, BITBOARDSIZE);
-	newbs->movementflags = movementflags;
-	newbs->blackplaying = blackplaying;
+	Boardstate newbs;
+	newbs.bitboard = malloc(BITBOARDSIZE);
+	newbs.bitboard = memset(newbs.bitboard, 0, BITBOARDSIZE);
+	if (bitboard!=NULL) memcpy(newbs.bitboard, bitboard, BITBOARDSIZE);
+	newbs.movementflags = movementflags;
+	newbs.blackplaying = blackplaying;
 	
 	return newbs;
 }
 
 Boardstate *
-cpyBoardstate(Boardstate *to, Boardstate *from)
+cpyBoardstate(Boardstate *to, Boardstate from)
 {
-		to->bitboard = memcpy(to->bitboard, from->bitboard, BITBOARDSIZE);
-		to->movementflags = from->movementflags;
-		to->blackplaying = from->blackplaying;
+		to->bitboard = memcpy(to->bitboard, from.bitboard, BITBOARDSIZE);
+		to->movementflags = from.movementflags;
+		to->blackplaying = from.blackplaying;
 		return to;
-}
-
-void
-destroyBoardstate(Boardstate *bs)
-{
-	free(bs->bitboard);
-	bs->bitboard = NULL;
-	free(bs);
-	bs = NULL;
-}
-
-void
-localMultiplayer()
-{
-	puts("White to play");
-	printBoard(currBoard);
-	// user input
-	// every time the user inputs a new move the attack vectors need to be reevaluated.
-	U8 from = -1, to = -1, result = 0, temp = -1, pos = 0, pos2 = 0;
-	U64 offset;
-	Board vector, coverage, tempcoverage;
-	bool colour;
-	pgnoutput po = makePGN("1", "White", "Black");
-	FILE *fp = fopen("output.pgn", "w");
-	for(;;) { // strange things are happening 
-LOOP: // works ok to me
-		result = parseInput(&from, &to);
-		switch(result) {
-			case(255):
-				dumpPGN(po, fp);
-				fclose(fp);
-				return; // exit
-			case(0):
-				goto LOOP; // bad input
-			case(1):
-				if (temp == 255) {
-SINGLEINPUT:
-					offset = 1ULL<<from;
-					if (currBoard.bitboard[total]&offset) { // if this is a piece that exists
-						// try to show where the piece can move
-						temp = from;
-						vector = calculateMovementVector(currBoard, temp);
-						findPiece(temp, NULL, &colour, currBoard.bitboard);
-						if (!vector || colour!=currBoard.blackplaying) temp = -1; // if it can't move anywhere don't expect it to, or if its the opponents piece you can't move it
-						printHighlightBoard(currBoard, vector);
-						goto LOOP;
-					} else {
-						// if only one piece can move to this empty square move it there	
-						temp = -1;
-						vector = getPlayerBoard(currBoard.bitboard, currBoard.blackplaying);
-						for (; vector; vector&=(vector-1)) { // iterate through all the possible pieces trying to move them and see if only one can move
-							pos = btoc(vector);
-							coverage = calculateMovementVector(currBoard, pos)&offset;
-							for (tempcoverage = coverage; tempcoverage; tempcoverage&=(tempcoverage-1)) {
-								pos2 = btoc(tempcoverage);
-								if(fauxMove(pos, pos2, currBoard, NULL)) {
-									if (temp==255) { // if one piece can move set temp and from and to 
-										to = from;
-										from = pos;	
-										temp = 0;
-									} else {
-										temp = -1;
-										to = -1;
-										from = -1;
-									}
-								}
-							}
-						}
-												
-					}
-				} else { //try to move
-					if (!fauxMove(temp, from, currBoard, NULL)) goto SINGLEINPUT; // if its an illegal move its probably meant to be viewing a single input
-					to = from; // another half input makes a full input
-					from = temp;
-				}
-				break;
-			case(2): // normal input
-				break;
-		}
-		temp = -1;
-		if (!movePiece(from, to)) goto LOOP;
-
-		currBoard.blackplaying=!currBoard.blackplaying; // switch players
-		appendMovePGN(prevBoard, currBoard, &po, from, to);
-		from = -1;
-		to = -1;
-		if(inCheckMate(currBoard)) {
-			printBoard(currBoard);
-			puts("Checkmate");
-			break; // end game
-		}
-		if(inStaleMate(currBoard)) {
-			printBoard(currBoard);
-			puts("Stalemate");
-			po.header.result = "1/2-1/2";
-			break; // end game
-		}
-		currBoard.blackplaying?puts("\nBlack to play"):puts("\nWhite to play");
-		if(inCheck(currBoard)) puts("Check");
-		printBoard(currBoard);
-	}
-
-
-	dumpPGN(po, fp);
-	fclose(fp);
-
-	return;
 }
 
 //add something here for not having to take piece or black
@@ -306,6 +201,30 @@ calculateMovementVector(Boardstate bs, Coord pos)
 	return vector;
 }
 
+U8
+iterateVector(Boardstate bs, Board fromvector, Board tovector, Coord *co, U8 pass)
+{
+	Coord pos, extra = 0;
+       	int count = 0, pos2 = 0;
+	Board coverage;
+	if (co == NULL) co = &extra;
+
+	for (; fromvector; fromvector&=(fromvector-1)) { // iterate through all the possible pieces trying to move them and see how many can move
+		pos = btoc(fromvector);
+		coverage = calculateMovementVector(bs, pos)&(1ULL<<tovector); // only try to go where it can
+		for (coverage = tovector; coverage; coverage&=(coverage-1)) {
+			pos2 = btoc(coverage);
+			if(fauxMove(pos, pos2, bs, NULL)) {
+				*co = pos;
+				if (pass&1) return 1;
+				if (pass&2 && count==1) return 2;
+				count++;
+			}
+		}
+	}
+	return count;
+}
+
 #ifdef DEBUG //compile with debug to see boards as just bits
 void
 debugPrintBoard(Board b) {
@@ -399,78 +318,128 @@ printHighlightBoard(Boardstate bs, Board highlights)
 	puts(row);
 }
 
-U8
-parseInput(Coord *from, Coord *to) 
+U8 // return number of chars read in
+readInput(char *s, U8 strsize) 
 {
-	char l1 = 0, n1 = 0, l2 = 0, n2 = 0;
-
 	char c;
+	fgets(s, strsize, stdin);
+	if (s[strlen(s)-1]=='\n') { // if the string is shorter than max size
+		s[strlen(s)-1]=0; // fix string length
+	} else while((c=fgetc(stdin)) != EOF && c != '\n'); // cleaning stdin
+	return strlen(s);
+}
 
-	l1 = fgetc(stdin);
-	if (l1 == EOF || l1 == 'q' || l1 == 'Q') { // if it reads quit on the first char
-		CLEARSTDIN;
-		return -1; // quit
+// parse from algebraic format
+// e4/e5/Ne4/Be4 etc.
+
+#define ATOC(A, B) ('a'-A+7+((B)-'0'-1)*8)
+bool
+parseInput(char *s, Coord *from, Coord *to) // need to check input format is correct too
+{
+	U8 len = strlen(s);
+	U8 file;
+	U64 p = 1ULL;
+	Coord temp;
+	Board b, t;
+#define INBOUNDS(A, B) ( ( (A>='a' && A<='z')|(A>='A' && A<='Z') ) && (B>='1' && B<='9') )
+	if (!INBOUNDS(s[len-2], s[len-1]) & (len>1)) return 0;
+	switch(len) {
+		case(0): // bad input, get input again
+			return 0;
+		case(1): // quit
+			if ((*s=='q')|(*s=='Q')) return 2;
+			return 0;
+		case(2):// pawn movement
+			// get playerboard and isolate pawns
+			// highlighting
+			// fauxmove from to
+			if (s[0]<'a') { // highlighting
+				temp = ATOC(s[0]-32, s[1]);
+				if (!(currBoard.bitboard[total]&1ULL<<temp)) break; // make sure there's a piece there to print
+				printHighlightBoard(currBoard, calculateMovementVector(currBoard, temp));
+				break;
+			}
+
+			b = getPlayerBoard(currBoard.bitboard, currBoard.blackplaying)&currBoard.bitboard[pawn]; // only get the pawns
+			*to = ATOC(s[0], s[1]); // convert format to coordinate
+			// find from
+			return (iterateVector(currBoard, b, p<<*to, from, 2)==1); // if only one piece can move its valid
+		case(3): // move piece/pawn Ne4/de4
+			 // figure out if the first char is lower or capital
+			 // attempt pawn movement/piece movement
+			
+			*to = ATOC(s[1], s[2]);	
+		       	if (*s<'a') { // if its giving a letter e.g. Nf3
+				b = getPlayerBoard(currBoard.bitboard, currBoard.blackplaying)&currBoard.bitboard[ltoe[(U8) *s]];
+				return (iterateVector(currBoard, b, p<<*to, from, 2)==1); // only want this to work if one piece can move there
+			}
+			file = 'a' - s[0] + 7; // find file 
+			t = p<<file;
+			for (int i = 0; i < 8; i++) {
+				t<<=8;
+				t |= p<<file;
+			} // make a board of just that file
+			b = getPlayerBoard(currBoard.bitboard, currBoard.blackplaying)&currBoard.bitboard[pawn]&t;
+			return (iterateVector(currBoard, b, p<<*to, from, 2)==1); // only should work if one piece can move there 
+		case(4): // move piece Nce4 / standard positional notation
+			*to = ATOC(s[2], s[3]);
+			if (INBOUNDS(s[0], s[1]) && (s[0]<'a')) { // make sure notation is correct
+				// standard positional notation	
+				*from = ATOC(s[0]-32, s[1]);
+				return true;
+			}
+			if (!(INBOUNDS(s[0], '1')&&(s[0]<'a')&&INBOUNDS(s[1], '1')&&(s[1]>='a'))) break; // check syntax
+			file = 'a' - s[1] + 7; // find file 
+			t = p<<file;
+			for (int i = 0; i < 8; i++) {
+				t<<=8;
+				t |= p<<file;
+			} // make a board of just that file
+			b = getPlayerBoard(currBoard.bitboard, currBoard.blackplaying)&currBoard.bitboard[ltoe[(U8) *s]]&t; // get a board of just those pieces on just that file
+			return (iterateVector(currBoard, b, p<<*to, from, 2)==1); // only should work if one piece can move there 
+		case(5): // move piece Nc3e4
+			 // make sure that the piece at the from pos matches the char
+			 // standard positional notation move
+			*to = ATOC(s[3], s[4]);
+			if (!(INBOUNDS(s[1], s[2])&&(s[1]>='a'))) break;
+			*from = ATOC(s[1], s[2]);
+			findPiece(*from, &temp, NULL, currBoard.bitboard);
+			if (temp==ltoe[(U8) s[0]]) return fauxMove(*from, *to, currBoard, NULL);
+			break;
 	}
-
-	if (l1 == '\n') return 0; // bad input
-
-	n1 = fgetc(stdin);
-
-	if (l1 == 0 || n1 == 0) return 0; // didn't read anything in
-	if (!( ((l1>='A') & (l1<='H')) || ((l1>='a') & (l1<='h')) ) || n1<'1' || n1>'8') return 0;
-	if (l1>='a' && l1<='h') l1-=32; // get in proper format
-	n1 -= '1';
-	*from = 7 - l1 + 'A' + n1*8; // convert to the format used internally (0-63)
-
-	l2 = fgetc(stdin);
-	if (l2 == '\n') { // if two character were entered then \n we have a partial input
-		return 1;
-	}
-
-	n2 = fgetc(stdin); // finally read the last character
-	CLEARSTDIN;
-
-	if (l2 == 0 || n2 == 0) return 1; // partial return 
-	if (!( ((l2>='A') & (l2<='H')) || ((l2>='a') & (l2<='h')) ) || n2<'1' || n2>'8') return 1; // partial return
-	if (l2>='a' && l2<='h') l2-=32; // get in proper format
-	n2 -= '1';
-	*to = 7 - l2 + 'A' + n2*8; // convert to the format used internally (0-63)
-
-	return 2; // full return
+	return false;
 }
 
 bool 
 movePiece(Coord from, Coord to) // works exclusively with the current board
 {
-	Boardstate *newbs = makeBoardstate(NULL, 0, 0); // new boardstate
-	if (!fauxMove(from, to, currBoard, newbs)) {
-		destroyBoardstate(newbs);
+	Boardstate newbs = makeBoardstate(NULL, 0, 0); // new boardstate
+	if (!fauxMove(from, to, currBoard, &newbs)) {
+		free(newbs.bitboard);
 		return false;
 	}
 
-	cpyBoardstate(&prevBoard, &currBoard);
+	cpyBoardstate(&prevBoard, currBoard);
 
 	cpyBoardstate(&currBoard, newbs);
 
-	destroyBoardstate(newbs);
+	free(newbs.bitboard);
 	return true;
 }
 
-#define FAUXMOVERET(A, B) {destroyBoardstate(A); return B;}
+#define FAUXMOVERET(A, B) {free(A.bitboard); return B;}
 bool
 fauxMove(Coord from, Coord to, Boardstate bs, Boardstate *nbs)
 {
-	Boardstate *extra = makeBoardstate(NULL, 0, 0); // new boardstate
-	if (nbs==NULL) nbs = extra;
-	nbs = cpyBoardstate(nbs, &bs);
+	Boardstate extra = makeBoardstate(NULL, 0, 0); // new boardstate
+	if (nbs==NULL) nbs = &extra;
+	nbs = cpyBoardstate(nbs, bs);
 
 	Coord frompiece, topiece, passantpiece;
 	bool fromcolourblack, tocolourblack, passantcolourblack;
 
 	findPiece(from, &frompiece, &fromcolourblack, nbs->bitboard);
 	findPiece(to, &topiece, &tocolourblack, nbs->bitboard);
-
-	Board moves;
 
 	if (bs.blackplaying-fromcolourblack || frompiece==nopiece || !(fromcolourblack^tocolourblack)&(topiece!=nopiece)) {
        	       FAUXMOVERET(extra, false); // Can't move a piece that doesn't exist or take your own piece
@@ -485,7 +454,7 @@ fauxMove(Coord from, Coord to, Boardstate bs, Boardstate *nbs)
 	switch(frompiece) {
 		case(pawn):
 			if (fromcolourblack) {
-				test = blackPawnMovement(from, to, *nbs, &moves);
+				test = blackPawnMovement(from, to, *nbs, NULL);
 				if (test == 2) { //en passant logic
 					findPiece(to+8, &passantpiece, &passantcolourblack, nbs->bitboard);
 					nbs->bitboard[total]^=p<<(to+8);
@@ -498,7 +467,7 @@ fauxMove(Coord from, Coord to, Boardstate bs, Boardstate *nbs)
 					nbs->movementflags&=0xF0;
 				}
 			} else {
-				test = whitePawnMovement(from, to, *nbs, &moves);
+				test = whitePawnMovement(from, to, *nbs, NULL);
 				if (test == 2) { // en passant
 					findPiece(to-8, &passantpiece, &passantcolourblack, nbs->bitboard);	
 					nbs->bitboard[black]^=p<<(to-8);
@@ -515,17 +484,16 @@ fauxMove(Coord from, Coord to, Boardstate bs, Boardstate *nbs)
 			// pawn has reached the end of the board 
 			// //update this to be ai friendly
 			if (test && (0==to>>3 || 7==to>>3)) {
-				puts("Enter which piece you want (R=1, K=2, B=3, Q=4): ");
-				U8 pieceno;
+				puts("Enter which piece you want (R=1, N=2, B=3, Q=4): ");
+				char pieceno[2];
 PROMOTION:
-				pieceno = getchar()-'0';
-				getchar();
-				switch(pieceno) {
+				readInput(pieceno, 2);
+				switch(*pieceno-'0') {
 					case(rook):
 					case(knight):
 					case(bishop):
 					case(queen):
-						frompiece=pieceno;	
+						frompiece=*pieceno;
 						break;
 					default:
 						goto PROMOTION;
@@ -684,28 +652,13 @@ inCheckMate(Boardstate bs)
 	
 	Board pieces = getPlayerBoard(bs.bitboard, bs.blackplaying); // Board containing just the king in question
 
-	Board kingb = bs.bitboard[king]&pieces;
-	
-	Coord kingc = btoc(kingb);
+	Coord kingc = btoc(bs.bitboard[king]&pieces); // position of the king
 	
 	//check if any other piece can move to break mate
 	
 	Board vectors = queenAttackVectors(kingc, bs.bitboard) | knightAttackVectors(kingc); // every position that can be attacking the king & the king can move to
 
-	Board tempcoverage, coverage;
-
-	Coord from, to;
-
-	for (; pieces; pieces&=(pieces-1)) { // iterate through all the possible pieces trying to block
-		from = btoc(pieces);
-		coverage = vectors & calculateMovementVector(bs, from); // only tries to move where pieces can move
-		for (tempcoverage = coverage; tempcoverage; tempcoverage&=(tempcoverage-1)) {
-			to = btoc(tempcoverage);
-			if(fauxMove(from, to, bs, NULL)) return false; // if it can stop the mate
-		}
-	}
-
-	return true; // couldn't find a potential move
+	return iterateVector(bs, pieces, vectors, NULL, 1) == 0; // try to move all of your pieces to ANY square
 }
 
 // 1) Not in check
@@ -716,23 +669,6 @@ bool
 inStaleMate(Boardstate bs)
 {
 	if (inCheck(bs)) return false; // can't be in check and in stalemate
-	
 	Board pieces = getPlayerBoard(bs.bitboard, bs.blackplaying); //returns a board of all the players pieces
-
-	Board tempcoverage, coverage;
-
-	Coord from, to;
-
-	for (; pieces; pieces&=(pieces-1)) { // iterate through all the possible pieces trying to move
-		from = btoc(pieces);
-		// findPiece, switch according to piece and generate coverage board from that
-		// maybe split this into its own function
-		coverage = calculateMovementVector(bs, from);
-		for (tempcoverage = coverage; tempcoverage; tempcoverage&=(tempcoverage-1)) {
-			to = btoc(tempcoverage);
-			if(fauxMove(from, to, bs, NULL)) return false;
-		}
-	}
-
-	return true; // couldn't find a potential move
+	return iterateVector(bs, pieces, -1, NULL, 1) == 0; // try to move all of your pieces to ANY square
 }
