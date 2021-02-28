@@ -16,15 +16,15 @@ typedef struct {
 	char *black;
 	char *result;
 	char *time;
-} pgnheader;
+} PGNheader;
 
 #define PGNSTRINGSIZE (4+(18*100)) // about 16 chars per turn at 100 turns with the result being printed at the end
 
 typedef struct {
-	pgnheader header;
-	char pgn[PGNSTRINGSIZE];
-	FILE *fp;
-} pgnoutput;
+	PGNheader header;
+	char pgn[PGNSTRINGSIZE]; // body of the moves being made
+	char *fp; // string representation of the path being saved to
+} PGNoutput;
 
 
 // [Event "Casual Game"]
@@ -37,9 +37,10 @@ typedef struct {
 // [Time ""]
 
 
-char *strrep(char *s, char pre, char post);
-pgnoutput makePGN(char *round, char *white, char *black);
-bool appendMovePGN(Boardstate pre, Boardstate post, pgnoutput *po, Coord from, Coord to);
-bool dumpPGN(Boardstate bs, pgnoutput po);
+char *strrep(char *s, char pre, char post); // replaces chars pre with post in the string s. Returns s
+PGNoutput makePGN(char *round, char *white, char *black); // makes pgn object and sets up all the memory and default values associated. Returns the pgn
+bool appendMovePGN(Boardstate pre, Boardstate post, PGNoutput *po, Coord from, Coord to); // Takes the previous boardstate and the current boardstate to figure out what changes have been made to the board with the moves from and to and updates the pgn body appropriately. Bool returns whether or not it updates successfully
+bool flushPGN(Boardstate bs, PGNoutput po); // writes to file described in po.fp
+bool dumpPGN(Boardstate bs, PGNoutput po); // runs flushPGN and cleans up the memory
 
 #endif //PGN_H

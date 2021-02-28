@@ -3,9 +3,10 @@
 
 Boardstate currBoard;
 Boardstate prevBoard;
+PGNoutput po;
 
 #define _ nopiece
-const U8 ltoe[] = {
+const U8 ltoe[] = { // lookup table for converting letters to enum representations e.g. ltoe['p'] -> pawn and ltoe['P'] -> pawn
 	_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
 	_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
 	_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
@@ -30,18 +31,17 @@ main()
 		puts("Quit: q");
 		
 		readInput(inp, 2);
+		if (*inp == 'Q' || *inp == 'q') return 0;
+		po = makePGN("1", "white", "black");
 		switch(*inp) {
 			case('1'):
-				localMultiplayer(&currBoard, &prevBoard);
-				break;
-			case('q'):
-			case('Q'):
-				return 0;
+				localMultiplayer(&currBoard);
 				break;
 			default:
 				puts("Bad Input");
 				break;
 		}
+		dumpPGN(currBoard, po);
 
 	}
 }
@@ -86,7 +86,6 @@ cpyBoardstate(Boardstate *to, Boardstate from)
 		return to;
 }
 
-//add something here for not having to take piece or black
 char 
 findPiece(Coord pos, U8 *piece, bool *colourblack, Board *bitboard) //returns a char representation of a piece for printing. A number as per the enum and a boolean on the colour of the piece.
 {
@@ -167,7 +166,7 @@ calculateAttackVectors(Board *bitboard, bool blackplaying) //returns an attack v
 }
 
 Board
-calculateMovementVector(Boardstate bs, Coord pos)
+calculateMovementVector(Boardstate bs, Coord pos) //returns a vector for where a singular piece can move
 {
 	Board vector;
 	U8 piece = nopiece;
@@ -202,7 +201,7 @@ calculateMovementVector(Boardstate bs, Coord pos)
 }
 
 U8
-iterateVector(Boardstate bs, Board fromvector, Board tovector, Coord *co, U8 pass)
+iterateVector(Boardstate bs, Board fromvector, Board tovector, Coord *co, U8 pass) // iterates through a vector of pieces trying to match their movement to another vector, returns the number of matches found
 {
 	Coord pos, extra = 0;
        	int count = 0, pos2 = 0;
@@ -263,7 +262,7 @@ printBoard(Boardstate bs)
 			putchar(' ');
 		}
 		puts("\n\n%  H G F E D C B A\n");
-	} else {
+	} else { // print the board the right way around
 		for (int i = 0; i < 64; i++) {
 			if (!(i%8))  { 
 				putchar('\n');
@@ -332,16 +331,16 @@ readInput(char *s, U8 strsize)
 // parse from algebraic format
 // e4/e5/Ne4/Be4 etc.
 
-#define ATOC(A, B) ('a'-A+7+((B)-'0'-1)*8)
+#define ATOC(A, B) ('a'-A+7+((B)-'0'-1)*8) // array to coordinate
+#define INBOUNDS(A, B) ( ( (A>='a' && A<='z')|(A>='A' && A<='Z') ) && (B>='1' && B<='9') )
 bool
-parseInput(char *s, Coord *from, Coord *to) // need to check input format is correct too
+parseInput(char *s, Coord *from, Coord *to) // used with stdin input
 {
 	U8 len = strlen(s);
 	U8 file;
 	U64 p = 1ULL;
 	Coord temp;
 	Board b, t;
-#define INBOUNDS(A, B) ( ( (A>='a' && A<='z')|(A>='A' && A<='Z') ) && (B>='1' && B<='9') )
 	if (!INBOUNDS(s[len-2], s[len-1]) & (len>1)) return 0;
 	switch(len) {
 		case(0): // bad input, get input again
@@ -409,6 +408,8 @@ parseInput(char *s, Coord *from, Coord *to) // need to check input format is cor
 	}
 	return false;
 }
+#undef ATOC
+#undef INBOUNDS
 
 bool 
 movePiece(Coord from, Coord to) // works exclusively with the current board
@@ -424,12 +425,16 @@ movePiece(Coord from, Coord to) // works exclusively with the current board
 	cpyBoardstate(&currBoard, newbs);
 
 	free(newbs.bitboard);
+
+	appendMovePGN(prevBoard, currBoard, &po, from, to);
+	flushPGN(currBoard, po);
+
 	return true;
 }
 
 #define FAUXMOVERET(A, B) {free(A.bitboard); return B;}
 bool
-fauxMove(Coord from, Coord to, Boardstate bs, Boardstate *nbs)
+fauxMove(Coord from, Coord to, Boardstate bs, Boardstate *nbs) // write a companion that's more efficient as this is used EVERYWHERE and has a little extra overhead than needed in some cases
 {
 	Boardstate extra = makeBoardstate(NULL, 0, 0); // new boardstate
 	if (nbs==NULL) nbs = &extra;
@@ -609,8 +614,9 @@ PROMOTION:
 
 	FAUXMOVERET(extra, true);
 }
+#undef FAUXMOVERET
 
-inline Coord btoc(Board b)
+inline Coord btoc(Board b) // board to coordinate
 {
 	if (!b) return 0;
 	Coord pos = 0;
@@ -630,11 +636,6 @@ inline bool inCheck(Boardstate bs) // invert this moveblack
 {
 	return !!(bs.bitboard[king]&getPlayerBoard(bs.bitboard, bs.blackplaying)&calculateAttackVectors(bs.bitboard, !bs.blackplaying));
 }
-
-////
-//Rewrite to use a bespoke function instead of fauxmove optimised for speed in this case?
-////
-
 
 // checks if the king is in mate
 //  -> checks if the king can move to any of its 8 possible moves

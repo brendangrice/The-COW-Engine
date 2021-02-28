@@ -1,30 +1,27 @@
 #include "gamemodes.h"
 
+// maybe get this to return something different depending on who wins?
 void
-localMultiplayer(Boardstate *currBoard, Boardstate *prevBoard)
+localMultiplayer(Boardstate *currBoard)
 {
 	puts("White to play");
 	printBoard(*currBoard);
-	// user input
-	// every time the user inputs a new move the attack vectors need to be reevaluated.
+
 	U8 result = 0;
-	pgnoutput po = makePGN("1", "White", "Black");
+	const U8 strsize = 6; // largest input that will be accepted by stdin
+	char s[strsize]; // input string
+	Coord from, to; // movements
 
-	const U8 strsize = 6;
-	char s[strsize];
-	Coord from, to;
-
-	for(;;) { // strange things are happening 
+	while(1) { 
 		from = 0;
 		to = 0;
 		readInput(s, strsize);
 		result = parseInput(s, &from, &to);
-		if (result==2) break;
-		if (!result) continue;
-		movePiece(from, to);
+		if (result==2) break; // quit
+		if (!result) continue; // if it successfully parsed
+		movePiece(from, to); // actually move the piece and update currBoard
 
 		currBoard->blackplaying=!currBoard->blackplaying; // switch players
-		appendMovePGN(*prevBoard, *currBoard, &po, from, to);
 		if(inCheckMate(*currBoard)) {
 			printBoard(*currBoard);
 			puts("Checkmate");
@@ -39,8 +36,6 @@ localMultiplayer(Boardstate *currBoard, Boardstate *prevBoard)
 		if(inCheck(*currBoard)) puts("Check");
 		printBoard(*currBoard);
 	}
-
-	dumpPGN(*currBoard, po);
 
 	return;
 }

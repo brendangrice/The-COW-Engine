@@ -11,23 +11,32 @@
 // [Black ""]
 // [Result ""]
 
-inline char *strrep(char *s, char pre, char post)
+inline char *strrep(char *s, char pre, char post) // string replace
 {
 	for (int i=0; i<strlen(s); i++) if (s[i]==pre) s[i]=post;
 	return s;
 }
 
 
-pgnoutput
+PGNoutput
 makePGN(char *round, char *white, char *black)
 {
-	pgnoutput po;
-	po.header.event = "Casual Game";
-	po.header.site = "https://github.com/brendangrice/The-COW-Engine"; // append timezone?
-	char *date = malloc(11);
-	char *starttime = malloc(9);
 	time_t t = time(NULL);
 	struct tm *tm = localtime(&t);
+	PGNoutput po;
+
+	po.header.event = "Casual Game";
+
+	char *site = malloc(60);
+	char timezone[10];
+	memset(site, 0, 60);
+	strncat(site, "https://github.com/brendangrice/The-COW-Engine", 50);
+	strncat(site, ": ", 3);
+	strftime(timezone, 10, "%Z", tm);
+	strncat(site, timezone, 10);
+	po.header.site = site;
+
+	char *date = malloc(11);
 	strftime(date, 11, "%F", tm);
 	strrep(date, '-', '.');
 	po.header.date = date;
@@ -35,22 +44,25 @@ makePGN(char *round, char *white, char *black)
 	po.header.white = white;
 	po.header.black = black;
 	po.header.result = "*";
-	strftime(starttime, 11, "%T", tm);
-	po.header.time = starttime; // this needs to be formatted
-	memset(po.pgn, 0, PGNSTRINGSIZE); // set for concating
-	char f[30];
+
+	char *starttime = malloc(9);
+	strftime(starttime, 9, "%T", tm);
+	po.header.time = starttime;
+	memset(po.pgn, 0, PGNSTRINGSIZE);
+	char *f = malloc(30);
+	memset(f, 0, 30);
 	strncat(f, "pgn/", 5);
 	strncat(f, date, strlen(date)+1);
 	strncat(f, "_", 2);
 	strncat(f, starttime, strlen(starttime)+1);
 	strncat(f, ".pgn", 5);
 	strrep(f, ':', '.');
-	po.fp = fopen(f, "w");
+	po.fp = f;
 	return po;
 }
 
 bool
-appendMovePGN(Boardstate pre, Boardstate post, pgnoutput *po, Coord from, Coord to)
+appendMovePGN(Boardstate pre, Boardstate post, PGNoutput *po, Coord from, Coord to)
 {
 	U64 p = 1ULL;
 	const int stringsize = 11; // max size a string can be
@@ -124,17 +136,19 @@ appendMovePGN(Boardstate pre, Boardstate post, pgnoutput *po, Coord from, Coord 
 }
 
 bool
-dumpPGN(Boardstate bs, pgnoutput po)
+flushPGN(Boardstate bs, PGNoutput po)
 {
-	fprintf(po.fp, "[Event \"%s\"]\n", po.header.event);
-	fprintf(po.fp, "[Site \"%s\"]\n", po.header.site);
-	fprintf(po.fp, "[Date \"%s\"]\n", po.header.date);
-	fprintf(po.fp, "[Round \"%s\"]\n", po.header.round);
-	fprintf(po.fp, "[White \"%s\"]\n", po.header.white);
-	fprintf(po.fp, "[Black \"%s\"]\n", po.header.black);
-	fprintf(po.fp, "[Result \"%s\"]\n", po.header.result);
 
-	fprintf(po.fp, "[Time \"%s\"]\n", po.header.time);
+	FILE *fp = fopen(po.fp, "w"); // needs to be rewritten each turn
+	fprintf(fp, "[Event \"%s\"]\n", po.header.event);
+	fprintf(fp, "[Site \"%s\"]\n", po.header.site);
+	fprintf(fp, "[Date \"%s\"]\n", po.header.date);
+	fprintf(fp, "[Round \"%s\"]\n", po.header.round);
+	fprintf(fp, "[White \"%s\"]\n", po.header.white);
+	fprintf(fp, "[Black \"%s\"]\n", po.header.black);
+	fprintf(fp, "[Result \"%s\"]\n", po.header.result);
+
+	fprintf(fp, "[Time \"%s\"]\n", po.header.time);
 
 	if (inCheck(bs)) {
 		if (inCheckMate(bs)) po.header.result = bs.blackplaying?"0-1":"1-0";
@@ -142,10 +156,19 @@ dumpPGN(Boardstate bs, pgnoutput po)
 
 	strncat(po.pgn, po.header.result, 8); // append the result
 
-	fputs(po.pgn, po.fp);
-	fclose(po.fp);
+	fputs(po.pgn, fp);
+	fclose(fp);
+	return true;
+}
+
+bool
+dumpPGN(Boardstate bs, PGNoutput po) // write with flushPGN and then free memory
+{
+	flushPGN(bs, po);
 	free(po.header.date);
 	free(po.header.time);
+	free(po.header.site);
+	free(po.fp);
 	return true;
 }
 

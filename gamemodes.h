@@ -5,6 +5,6 @@
 #ifndef GAMEMODES_H
 #define GAMEMODES_H
 
-void localMultiplayer(); // function for running the multiplayer
+void localMultiplayer(Boardstate *currBoard); // function for running the multiplayer
 
 #endif // GAMEMODES_H

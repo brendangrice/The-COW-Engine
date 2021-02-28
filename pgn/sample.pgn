@@ -1,9 +1,9 @@
 [Event "Casual Game"]
-[Site "https://github.com/brendangrice/The-COW-Engine"]
+[Site "https://github.com/brendangrice/The-COW-Engine: GMT"]
 [Date "2021.02.28"]
 [Round "1"]
-[White "White"]
-[Black "Black"]
+[White "white"]
+[Black "black"]
 [Result "*"]
-[Time "17:58:12"]
-1. e4 e5 2. f4 exf4 3. Qh5 h6 4. Bc4 a5 5. Qxf7# 0-1
+[Time "20:54:14"]
+1. e4 e5 2. Qf3 a6 3. Bc4 Ra7 4. Qxf7 0-1
