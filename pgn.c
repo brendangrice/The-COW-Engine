@@ -11,12 +11,6 @@
 // [Black ""]
 // [Result ""]
 
-inline char *strrep(char *s, char pre, char post) // string replace
-{
-	for (int i=0; i<strlen(s); i++) if (s[i]==pre) s[i]=post;
-	return s;
-}
-
 
 PGNoutput
 makePGN(char *round, char *white, char *black)
@@ -65,7 +59,7 @@ bool
 appendMovePGN(Boardstate pre, Boardstate post, PGNoutput *po, Coord from, Coord to)
 {
 	U64 p = 1ULL;
-	const int stringsize = 11; // max size a string can be
+	const int stringsize = 18; // max size a string can be
 	char str[stringsize]; // most characters each move can be e.g. Nf6xe4+
 	char c, *s = str;
 	memset(str, 0, stringsize);
@@ -77,11 +71,33 @@ appendMovePGN(Boardstate pre, Boardstate post, PGNoutput *po, Coord from, Coord 
 	if (piece >= 'a' && piece <= 'z') piece-=32; //lowercase to upper
 	if (piece < 'A' || piece > 'Z') return false; // out of bounds
 	if (!pre.blackplaying) { // if its white we need to update the move count
-		//find the number of moves already present		
+		//find the number of moves already present
 		for (int i = 0; po->pgn[i]; i++) if (po->pgn[i]=='.') move++;
 		sprintf(str, "%d. ", move);
-		s+=3;
+		s+=strlen(str);
 	}
+	
+	// castling
+	
+	if ((pre.movementflags&0xF0) != (post.movementflags&0xF0)) { // potential castle
+		if (pieceno == king) { // if the king moved
+			switch(to) {
+				// O-O-O
+				case(5): // queen side white
+				case(61): // queen side black
+					*s++='O';
+					*s++='-';
+				// O-O
+				case(1): // king side white
+				case(57): // king side black
+					*s++='O';
+					*s++='-';
+					*s++='O';
+					goto APPENDEND;
+			}
+		}
+	}
+	
 	// if its not a pawn (pawn doesnt give P)
 	if (piece != 'P') *s++ = piece; // first character is the piece	
 
@@ -119,11 +135,15 @@ appendMovePGN(Boardstate pre, Boardstate post, PGNoutput *po, Coord from, Coord 
 		s[1] = c; // find promotion piece
 		s+=2;
 	}
+
+APPENDEND: // TODO change more stuff to goto here to skip over more unneccessary if statements
+
 	// if it's check/checkmate we need to append +/#
+	// need to switch which player is being checked for mate
+	post.blackplaying = !post.blackplaying;
 	if (inCheck(post)) {
 		if (inCheckMate(post)) {
 			*s++='#';
-			*s = ' ';
 		} else {
 			*s++='+';
 		}
@@ -148,7 +168,7 @@ flushPGN(Boardstate bs, PGNoutput po)
 	fprintf(fp, "[Black \"%s\"]\n", po.header.black);
 	fprintf(fp, "[Result \"%s\"]\n", po.header.result);
 
-	fprintf(fp, "[Time \"%s\"]\n", po.header.time);
+	fprintf(fp, "[Time \"%s\"]\n\n", po.header.time);
 
 	if (inCheck(bs)) {
 		if (inCheckMate(bs)) po.header.result = bs.blackplaying?"0-1":"1-0";

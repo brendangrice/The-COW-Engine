@@ -42,8 +42,26 @@ main()
 				break;
 		}
 		dumpPGN(currBoard, po);
-
 	}
+}
+
+inline void strrep(char *s, char pre, char post) // string replace
+{
+	for (int i=0; i<strlen(s); i++) if (s[i]==pre) s[i]=post;
+}
+
+void strrm(char *s, char rm) // string remove
+{
+	U8 len = strlen(s);
+	char *ptr = s;
+	for (int i=0; ptr[i]; i++) {
+		if (ptr[i]==rm) {
+			ptr++;
+			i--;
+			len--;
+		} else 	s[i] = ptr[i];
+	}
+	s[len] = 0;
 }
 
 void
@@ -341,6 +359,35 @@ parseInput(char *s, Coord *from, Coord *to) // used with stdin input
 	U64 p = 1ULL;
 	Coord temp;
 	Board b, t;
+
+	strrm(s, 'x'); // remove extra symbols
+	strrm(s, '+');
+	strrm(s, '#');
+
+	if (strcmp(s, "O-O")==0) {
+		// check which player is trying to castle
+		// fauxmove
+		if (currBoard.blackplaying) {
+			*from = 59;
+			*to = 57;
+		} else {
+			*from = 3;
+			*to = 1;
+		}
+		return fauxMove(*from, *to, currBoard, NULL);
+	} else if (strcmp(s, "O-O-O")==0) {
+		// check which player is trying to castle
+		// fauxmove
+		if (currBoard.blackplaying) {
+			*from = 59;
+			*to = 61;
+		} else {
+			*from = 3;
+			*to = 5;
+		}
+		return fauxMove(*from, *to, currBoard, NULL);
+	}
+
 	if (!INBOUNDS(s[len-2], s[len-1]) & (len>1)) return 0;
 	switch(len) {
 		case(0): // bad input, get input again

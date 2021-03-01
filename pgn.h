@@ -18,7 +18,7 @@ typedef struct {
 	char *time;
 } PGNheader;
 
-#define PGNSTRINGSIZE (4+(18*100)) // about 16 chars per turn at 100 turns with the result being printed at the end
+#define PGNSTRINGSIZE (4+(18*100)) // about 18 chars per turn at 100 turns with the result being printed at the end
 
 typedef struct {
 	PGNheader header;
@@ -37,7 +37,6 @@ typedef struct {
 // [Time ""]
 
 
-char *strrep(char *s, char pre, char post); // replaces chars pre with post in the string s. Returns s
 PGNoutput makePGN(char *round, char *white, char *black); // makes pgn object and sets up all the memory and default values associated. Returns the pgn
 bool appendMovePGN(Boardstate pre, Boardstate post, PGNoutput *po, Coord from, Coord to); // Takes the previous boardstate and the current boardstate to figure out what changes have been made to the board with the moves from and to and updates the pgn body appropriately. Bool returns whether or not it updates successfully
 bool flushPGN(Boardstate bs, PGNoutput po); // writes to file described in po.fp

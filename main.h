@@ -51,6 +51,9 @@ extern const U8 ltoe[]; // letter to enum, e.g. 'N' -> knight, tentative global
  *
  */
 
+
+void strrep(char *s, char pre, char post); // replaces chars pre with post in the string s. Returns s
+void strrm(char *s, char rm); // removes all instances of character rm in string s
 void setBitBoard(); // sets the bitboard for a standard chess game
 Boardstate makeBoardstate(Board *bitboard, U8 movementflags, bool blackplaying); // makes a boardstate, if NULL is given for bitboard it makes an empty one. Returns the new boardstate
 Boardstate *cpyBoardstate(Boardstate *to, Boardstate from); // copies boardstate and everything inside. Returns a pointer to the new boardstate
