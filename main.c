@@ -1,4 +1,5 @@
 #include "main.h"
+
 ////
 // Maybe just update total at the end of each move instead of updating it 
 // alongside all the other pieces and movements with one or.
@@ -8,10 +9,11 @@ Boardstate currBoard;
 void
 setBitBoard()
 {
+	char *FEN = DEFAULT;
 	
-	initHash();
+	//initHash();
 	currBoard.movementflags=0xF0; // set castling to be available for both players
-	currBoard.blackplaying = false; // game starts with white
+	//currBoard.blackplaying = false; // game starts with white
 	currBoard.bitboard = malloc(BITBOARDSIZE);
 
 	for (int i = 0; i < BITBOARDELEMENTS; i++) {
@@ -20,25 +22,28 @@ setBitBoard()
 	
 	// encoded chess board
 	// First half is black, second is white
-	currBoard.bitboard[pawn] = 0x00FF00000000FF00;
-	currBoard.bitboard[rook] = 0x8100000000000081;
-	currBoard.bitboard[knight] = 0x4200000000000042;
-	currBoard.bitboard[bishop] = 0x2400000000000024;
-	currBoard.bitboard[queen] = 0x1000000000000010;
-	currBoard.bitboard[king] = 0x0800000000000008;
-	currBoard.bitboard[black] = 0xFFFF000000000000;
-	currBoard.bitboard[total] = currBoard.bitboard[pawn]|currBoard.bitboard[rook]|currBoard.bitboard[knight]|currBoard.bitboard[bishop]|currBoard.bitboard[queen]|currBoard.bitboard[king];
+//	currBoard.bitboard[pawn] = 0xF000000000000000;
+//	currBoard.bitboard[pawn] = 0x00FF00000000FF00;
+//	currBoard.bitboard[rook] = 0x8100000000000081;
+//	currBoard.bitboard[knight] = 0x4200000000000042;
+//	currBoard.bitboard[bishop] = 0x2400000000000024;
+//	currBoard.bitboard[queen] = 0x1000000000000010;
+//	currBoard.bitboard[king] = 0x0800000000000008;
+//	currBoard.bitboard[black] = 0xFFFF000000000000;
+//	currBoard.bitboard[total] = currBoard.bitboard[pawn]|currBoard.bitboard[rook]|currBoard.bitboard[knight]|currBoard.bitboard[bishop]|currBoard.bitboard[queen]|currBoard.bitboard[king];
+	currBoard = parseFEN(FEN, currBoard);
 }
 
 int 
 main() 
 {
-	setBitBoard();
-	TTclear();
+	//setBitBoard();
+	//TTclear();
 	char c; // input
 	while (1) {
 
 	setBitBoard();
+	
 	puts("Select your gamemode.");
 	puts("Local multiplayer: 1");
 	puts("Local AI: 2");
@@ -88,8 +93,7 @@ cpyBoardstate(Boardstate *to, Boardstate from)
 void
 localAI()
 {
-	puts("White to play");
-	//printBoard(currBoard);
+	currBoard.blackplaying?puts("\nBlack to play"):puts("\nWhite to play");
 	prettyPrintBoard(currBoard);
 	// user input
 	// every time the user inputs a new move the attack vectors need to be reevaluated.
@@ -113,21 +117,18 @@ LOOP: // works ok to me
 		currBoard.blackplaying=!currBoard.blackplaying; // switch players
 		
 		if(inCheckMate(currBoard)) {
-			//printBoard(currBoard);
 			prettyPrintBoard(currBoard);
 			puts("Checkmate");
 			break; // end game
 		}
 		
 		if(inStaleMate(currBoard)) {
-			//printBoard(currBoard);
 			prettyPrintBoard(currBoard);
 			puts("Stalemate");
 			break; // end game
 		}
 		currBoard.blackplaying?puts("\nBlack to play"):puts("\nWhite to play");
 		if(inCheck(currBoard)) puts("Check");
-		//printBoard(currBoard);
 		prettyPrintBoard(currBoard);
 	}
 	return;
@@ -138,8 +139,8 @@ localMultiplayer()
 {
 	puts("White to play");
 	printBoard(currBoard);
-	U64 key = generateHash(currBoard, -1);
-	printf("\nKey : %llx	\n", key);
+	//U64 key = generateHash(currBoard, -1);
+	//printf("\nKey : %llx	\n", key);
 	printFEN(currBoard, -1, -1);
 	// user input
 	// every time the user inputs a new move the attack vectors need to be reevaluated.
@@ -168,8 +169,8 @@ LOOP: // works ok to me
 		if(inCheck(currBoard)) puts("Check");
 		printBoard(currBoard);
 		printFEN(currBoard, from, to);
-		key = generateHash(currBoard, to);
-		printf("\nKey : %llx\n", key);
+		//key = generateHash(currBoard, to);
+		//printf("\nKey : %llx\n", key);
 	}
 	return;
 }
@@ -342,6 +343,7 @@ void printFEN(Boardstate bs, Coord from, Coord to)
 			}
 		}
 	}
+	
 
 	// Side to move
 	putchar(' ');
@@ -398,54 +400,25 @@ void prettyPrintBoard(Boardstate bs)
 		  +---+---+---+---+---+---+---+---+
 			A   B   C   D   E   F   G   H
 	*/
-	if(bs.blackplaying)
+	bool change = false;
+	printf("\n   +---+---+---+---+---+---+---+---+");
+	for(int i = 0 ; i < 64; i++)
 	{
-		bool change = false;
-		printf("\n   +---+---+---+---+---+---+---+---+");
-		for(int i = 0 ; i < 64; i++)
+		if(!(i%8))
 		{
-			if(!(i%8))
+			bs.blackplaying ? printf("\n %c |",'1'+(i/8)) : printf("\n %c |",'8'-(i/8));;
+			change = !change;
+			for(int j = i; j < i+8; j++)
 			{
-				printf("\n %c |",'1'+(i/8));
+				char c  = bs.blackplaying ? findPiece(j, NULL, NULL, bs.bitboard) : findPiece(63-j, NULL, NULL, bs.bitboard);
+				if(c == '.') c = ' '; 
+				change ? printf(" %c |", c) : printf(" %c |", c); // maybe shade the dark squares in the future?
 				change = !change;
-				for(int j = i; j < i+8; j++)
-				{
-					char c = findPiece(j, NULL, NULL, bs.bitboard);
-					if(c == '.') c = ' '; 
-					change ? 
-						printf(" %c |", c): 
-						printf(" %c |", c); // maybe shade the dark squares in the future?
-					change = !change;
-				}				
-				printf("\n   +---+---+---+---+---+---+---+---+");	
-			}
+			}				
+			printf("\n   +---+---+---+---+---+---+---+---+");	
 		}
-		printf("\n     H   G   F   E   D   C   B   A  \n");
 	}
-	else
-	{
-		bool change = false;
-		printf("\n   +---+---+---+---+---+---+---+---+");
-		for(int i = 0 ; i < 64; i++)
-		{
-			if(!(i%8))
-			{
-				printf("\n %c |",'8'-(i/8));
-				change = !change;
-				for(int j = i; j < i+8; j++)
-				{
-					char c = findPiece(63-j, NULL, NULL, bs.bitboard);
-					if(c == '.') c = ' '; 
-					change ? 
-						printf(" %c |", c): 
-						printf(" %c |", c); // maybe shade the dark squares in the future?
-					change = !change;
-				}				
-				printf("\n   +---+---+---+---+---+---+---+---+");	
-			}
-		}
-		printf("\n     A   B   C   D   E   F   G   H  \n");
-	}
+	bs.blackplaying ? printf("\n     H   G   F   E   D   C   B   A  \n") : printf("\n     A   B   C   D   E   F   G   H  \n");
 }
 void
 printBoard(Boardstate bs)
@@ -472,6 +445,177 @@ printBoard(Boardstate bs)
 		puts("\n\n% ABCDEFGH\n");
 	}
 	puts("\n");
+}
+
+
+Boardstate
+parseFEN(char *FEN, Boardstate bs)
+{
+	// reset the board
+	for(int i = 0 ; i < BITBOARDELEMENTS; i++)
+	{
+		bs.bitboard[i] = 0;
+	}
+	
+	bs.movementflags = 0;
+	bs.blackplaying = false;
+	
+	//printBoard(bs);
+	
+	// AFILE 8080 8080 8080 8080
+	// BFILE 4040 4040 4040 4040
+	// CFILE 2020 2020 2020 2020
+	// DFILE 1010 1010 1010 1010
+	// EFILE 0808 0808 0808 0808
+	// FFILE 0404 0404 0404 0404
+	// GFILE 0202 0202 0202 0202
+	// HFILE 0101 0101 0101 0101
+	
+	// 8RANK FF00 0000 0000 0000
+	// 7RANK 00FF 0000 0000 0000
+	// 6RANK 0000 FF00 0000 0000
+	// 5RANK 0000 00FF 0000 0000
+	// 4RANK 0000 0000 FF00 0000
+	// 3RANK 0000 0000 00FF 0000
+	// 2RANK 0000 0000 0000 FF00
+	// 1RANK 0000 0000 0000 00FF
+	
+	int rank = 8; // start on the 8 rank
+	int file = 0; // start at the A file
+	int count = 0;
+	char piece = '.'; // hold the piece
+	bool isBlack = false; // indicate if the piece is black
+	while((rank >= 1) && *FEN) // while on the board and there is FEN to be parsed
+	{
+		count = 1;
+		
+		switch(*FEN)
+		{
+			// black piece
+			case 'p' : piece = 'p'; isBlack = true; break;
+			case 'r' : piece = 'r'; isBlack = true; break;
+			case 'n' : piece = 'n'; isBlack = true; break;
+			case 'b' : piece = 'b'; isBlack = true; break;
+			case 'k' : piece = 'k'; isBlack = true; break;
+			case 'q' : piece = 'q'; isBlack = true; break;
+			// white piece
+			case 'P' : piece = 'P'; isBlack = false; break;
+			case 'R' : piece = 'R'; isBlack = false; break;
+			case 'N' : piece = 'N'; isBlack = false; break;
+			case 'B' : piece = 'B'; isBlack = false; break;
+			case 'K' : piece = 'K'; isBlack = false; break;
+			case 'Q' : piece = 'Q'; isBlack = false; break;
+			// number of empty
+			case '1' : 
+			case '2' : 
+			case '3' : 
+			case '4' : 
+			case '5' : 
+			case '6' : 
+			case '7' : 
+			case '8' : piece = nopiece; count = *FEN - '0'; break;
+			// formatting
+			case '/' :
+			case ' ' : rank--; file = 0; FEN++; continue;
+			// error
+			default  : printf("\nSomething Went Wrong! %s", FEN);
+		}
+		for(int i = 0; i < count; i++)
+		{
+			//int square = rank * 8 + file;
+			if(piece != nopiece)
+			{
+				
+				char letter = 'A'+file;
+				char number = '0'+rank;
+				
+				U64 FILE_ID = 0;
+				U64 RANK_ID = 0;
+				
+				int type = 0;
+				
+				switch(letter)
+				{
+					case 'A' : FILE_ID = AFILE; break;
+					case 'B' : FILE_ID = BFILE; break;
+					case 'C' : FILE_ID = CFILE; break;
+					case 'D' : FILE_ID = DFILE; break;
+					case 'E' : FILE_ID = EFILE; break;
+					case 'F' : FILE_ID = FFILE; break;
+					case 'G' : FILE_ID = GFILE; break;
+					case 'H' : FILE_ID = HFILE; break;
+					default  : printf("\nSomething Went Wrong");
+				}
+				switch(number)
+				{
+					case '1' : RANK_ID = RANK1; break;
+					case '2' : RANK_ID = RANK2; break;
+					case '3' : RANK_ID = RANK3; break;
+					case '4' : RANK_ID = RANK4; break;
+					case '5' : RANK_ID = RANK5; break;
+					case '6' : RANK_ID = RANK6; break;
+					case '7' : RANK_ID = RANK7; break;
+					case '8' : RANK_ID = RANK8; break;
+					default  : printf("\nSomething Went Wrong");
+				}
+				
+				switch(piece)
+				{
+					case 'p' : 
+					case 'P' : type = pawn; break;
+					case 'r' :
+					case 'R' : type = rook; break;
+					case 'n' :
+					case 'N' : type = knight; break;
+					case 'b' :
+					case 'B' : type = bishop; break;
+					case 'q' :
+					case 'Q' : type = queen; break;
+					case 'k' :
+					case 'K' : type = king; break;
+					default  : printf("\nSomething Went Wrong");
+				}
+				U64 square = (FILE_ID&RANK_ID);
+				bs.bitboard[type] += square;
+				if(isBlack) bs.bitboard[black] += square;
+			}
+			file++;
+		}
+		FEN++;
+	}
+	
+	// combine all of the values
+	
+	bs.bitboard[total] = 	bs.bitboard[pawn]|
+							bs.bitboard[rook]|
+							bs.bitboard[knight]|
+							bs.bitboard[bishop]|
+							bs.bitboard[queen]|
+							bs.bitboard[king];
+	//printBoard(bs);
+	
+	// assign side to move
+	*FEN == 'b' ? (bs.blackplaying = true) : (bs.blackplaying = false); 
+	FEN+=2;
+
+	// assign castling rights
+	for(int i = 0; i < 4; i++)
+	{
+		if(*FEN == ' ') break;
+		switch(*FEN)
+		{
+			case 'K' : bs.movementflags |= 0x80; break;
+			case 'Q' : bs.movementflags |= 0x40; break;
+			case 'k' : bs.movementflags |= 0x20; break;
+			case 'q' : bs.movementflags |= 0x10; break;
+			default  : break;
+		}
+		FEN++;
+	}
+	
+	// TODO assign enpassant to movement flags
+	
+	return bs;
 }
 
 bool

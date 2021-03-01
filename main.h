@@ -25,6 +25,29 @@
 // Bitboards for each piece, 1 for every player past one, 1 more for the total board. 
 #define BOARDSTATESIZE (BITBOARDSIZE*sizeof(Board)+sizeof(U8))
 
+// file and rank constants
+
+#define AFILE 0x8080808080808080
+#define BFILE 0x4040404040404040
+#define CFILE 0x2020202020202020
+#define DFILE 0x1010101010101010
+#define EFILE 0x0808080808080808
+#define FFILE 0x0404040404040404
+#define GFILE 0x0202020202020202
+#define HFILE 0x0101010101010101
+
+#define RANK8 0xFF00000000000000
+#define RANK7 0x00FF000000000000
+#define RANK6 0x0000FF0000000000
+#define RANK5 0x000000FF00000000
+#define RANK4 0x00000000FF000000
+#define RANK3 0x0000000000FF0000
+#define RANK2 0x000000000000FF00
+#define RANK1 0x00000000000000FF
+
+// FEN constants
+#define DEFAULT "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
 enum { // all available 'pieces'
 	pawn,
 	rook,
@@ -67,6 +90,8 @@ Board getPlayerBoard(Board *bitboard, bool blackplaying); // returns the combine
 bool inCheck(Boardstate bs); // returns a boolean for whether or not the player is in check
 bool inCheckMate(Boardstate bs); // returns a boolean for whether or not the player is mate'd
 bool inStaleMate(Boardstate bs);
+
+Boardstate parseFEN();
 
 #ifdef DEBUG
 void debugPrintBoard(Board b);
