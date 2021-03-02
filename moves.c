@@ -3,7 +3,7 @@
 //TODO COMBINE PAWNMOVEMENT AND ATTACK, MAKING THEM WORK OFF ONE FUNCTION BASED ON COLOUR
 
 U8
-whitePawnMovement(Coord from, Coord to, Boardstate bs, Board *vector) //returning early not making whole vector
+whitePawnMovement(Coord from, Coord to, Boardstate bs, Board *vector)
 {
 	Board extra;
 	if (vector==NULL) vector = &extra;
@@ -13,7 +13,7 @@ whitePawnMovement(Coord from, Coord to, Boardstate bs, Board *vector) //returnin
 	*vector |= attack&bs.bitboard[black]; // where the piece can attack
 	*vector |= (~bs.bitboard[total])&(p<<(from+8)); // if there isn't a piece in front it can move
 	if (bs.movementflags&8) *vector |= attack&((p<<40)<<(bs.movementflags&7)); // where the pawn can attack and en passant
-	if ((from>>3)==1) *vector |= (~bs.bitboard[total])&(p<<(from+16)); //blackmust be on the second file and no piece in front of it, need to update flags too
+	if ((from>>3)==1 && !(bs.bitboard[total]&p<<(from+8))) *vector |= (~bs.bitboard[total])&(p<<(from+16)); //must be on the second file and no piece in front of it by one or two spaces, need to update flags too
 	// figure out what sort of move was made
 	if (to==40+(bs.movementflags&7) && *vector&p<<to) return 2; // en passant
 	if (to==from+16 && *vector&p<<to) return 3; // double move, update flags
@@ -33,7 +33,7 @@ blackPawnMovement(Coord from, Coord to, Boardstate bs, Board *vector)
 	*vector |= attack&(bs.bitboard[total]^bs.bitboard[black]); //where the pawn can normally attack
 	*vector |= (~bs.bitboard[total])&(p<<(from-8)); // if there isn't a piece in front it can move
 	if (bs.movementflags&8) *vector |= attack&((p<<16)<<(bs.movementflags&7)); // where the pawn can attack and en passant
-	if ((from>>3)==6) *vector |= (~bs.bitboard[total])&(p<<(from-16)); // must be on the second file and no piece in front of it, need to update flags too
+	if ((from>>3)==6 && !(bs.bitboard[total]&(p<<(from-8)))) *vector |= (~bs.bitboard[total])&(p<<(from-16)); // must be on the second file and no piece one or two squares in front of it, need to update flags too
 	if (to==16+(bs.movementflags&7) && *vector&p<<to) return 2; // en passant
 	if (to==from-16 && *vector&p<<to) return 3; // double move, update flags
 	if (*vector&p<<to) return 1; // regular movement

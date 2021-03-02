@@ -7,15 +7,12 @@ getDomainAndPort(char *domain, char *port)
 	memset(domain, 0, strlen(domain));
 	memset(port, 0, strlen(port));
 	fputs("Enter the domain address you want to connect to: ", stdout);
-	fgets(domainandport, 30, stdin);
-	fflush(stdout);
-	domainandport[strlen(domainandport)-1] = '\0'; // remove \n
+	readInput(domainandport, 30);
 	char *portpos = strchr(domainandport, ':');
 	if (portpos==NULL) {
 		domain=domainandport;
 		fputs("Enter the port you want to connect to: ", stdout);
-		fgets(port, 10, stdin);
-		port[strlen(port)-1] = '\0';
+		readInput(port, 10);
 	} else {
 		domain = strncat(domain, domainandport, portpos-domainandport);
 		port = strncat(port, ++portpos, 9);

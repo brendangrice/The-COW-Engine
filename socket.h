@@ -9,18 +9,18 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 
-#endif
+#endif // UNIX
 
 #include "types.h"
+#include "main.h"
 
 #ifndef SOCKET_H
 #define SOCKET_H
 
-#ifdef _WIN32 
-
+#ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN // reduces overhead
 #define WIN32_LEAN_AND_MEAN
-#endif
+#endif // WINDOWS
 
 #include <windows.h> // Windows includes
 #include <winsock2.h>
