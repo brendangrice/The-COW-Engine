@@ -10,7 +10,9 @@
 #include "eval.h"
 #include "ai.h"
 
+/*
 #include "tt.h"
+*/
 
 
 // Should attack boards be tracked like this

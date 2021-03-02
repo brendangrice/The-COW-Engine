@@ -26,11 +26,15 @@ typedef struct {
 	bool blackplaying;
 } Boardstate;
 
+
+
+/*
 typedef struct {
     U64 key;
     int depth;
     int flag; // 0 = exact, 1 = alpha, 2 = beta
     float score; 
 } TransitionTable;
+*/
 
 #endif

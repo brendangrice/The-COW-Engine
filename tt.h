@@ -1,3 +1,4 @@
+/*
 #include "main.h"
 
 #define hash_size 0x400000
@@ -19,3 +20,4 @@ void TTclear();
 // fix these warnings
 float TTread(int alpha, int beta, int depth); // read Transition Table for an entry matching the parameters.  
 void TTwrite(int score, int depth, int flag); // writes to Transition Table with score depth and flag EXACT|ALPHA|BETA
+*/

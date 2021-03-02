@@ -317,8 +317,8 @@ NegaMax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 	//	return calculateAdvantage(bs);
 	//}
 	if(depth == 0) return calculateAdvantage(bs);
-	float alphaOrig = alpha;
-	int flag = hash_flag_alpha;
+	//float alphaOrig = alpha;
+	//int flag = hash_flag_alpha;
 	int i = 0;
 	int x = 0;	
 
@@ -397,6 +397,7 @@ NegaMax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 	}
 	*/
 	//https://en.wikipedia.org/wiki/Negamax#Negamax_with_alpha_beta_pruning_and_transposition_tables
+	/*
 	if(bestMove <= alphaOrig)
 	{
 		flag = hash_flag_alpha;
@@ -410,7 +411,7 @@ NegaMax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 		flag = hash_flag_exact;
 	}
 	TTwrite(bestMove, depth, flag);
-	//printf("\nadding position to the tt");
+	*/
 	return bestMove;
 }
 

@@ -1,3 +1,4 @@
+/*
 #include "tt.h"
 #include "ai.h"
 
@@ -166,7 +167,7 @@ TTwrite(int score, int depth, int flag)
 	entry->depth = depth;
 }
 
-
+*/
 
 
 
