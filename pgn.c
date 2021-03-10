@@ -13,46 +13,173 @@
 
 
 PGNoutput
-makePGN(char *round, char *white, char *black)
+makePGN(char *round, char *white, char *black, char *fp)
 {
+
+	if (round == NULL) round = "1";
+	if (white == NULL) white = "White";
+	if (black == NULL) black = "Black";
+
 	time_t t = time(NULL);
 	struct tm *tm = localtime(&t);
 	PGNoutput po;
 
-	po.header.event = "Casual Game";
+	strcpy(po.header.event, "Casual Game");
 
-	char *site = malloc(60);
+	char site[PGNHEADERSIZE];
 	char timezone[10];
-	memset(site, 0, 60);
-	strncat(site, "https://github.com/brendangrice/The-COW-Engine", 50);
+	memset(site, 0, PGNHEADERSIZE);
+	strncat(site, "https://github.com/brendangrice/The-COW-Engine", PGNHEADERSIZE-10);
 	strncat(site, ": ", 3);
 	strftime(timezone, 10, "%Z", tm);
 	strncat(site, timezone, 10);
-	po.header.site = site;
+	strcpy(po.header.site, site);
 
-	char *date = malloc(11);
+	char date[11];
 	strftime(date, 11, "%F", tm);
 	strrep(date, '-', '.');
-	po.header.date = date;
-	po.header.round = round;
-	po.header.white = white;
-	po.header.black = black;
-	po.header.result = "*";
+	strcpy(po.header.date, date);
+	strcpy(po.header.round, round);
+	strcpy(po.header.white, white);
+	strcpy(po.header.black, black);
+	strcpy(po.header.result, "*");
 
-	char *starttime = malloc(9);
+	char starttime[9];
 	strftime(starttime, 9, "%T", tm);
-	po.header.time = starttime;
+	strcpy(po.header.time, starttime);
 	memset(po.pgn, 0, PGNSTRINGSIZE);
-	char *f = malloc(30);
-	memset(f, 0, 30);
-	strncat(f, "pgn/", 5);
-	strncat(f, date, strlen(date)+1);
-	strncat(f, "_", 2);
-	strncat(f, starttime, strlen(starttime)+1);
-	strncat(f, ".pgn", 5);
-	strrep(f, ':', '.');
-	po.fp = f;
+	po.fp = malloc(30);
+	if (fp==NULL) {
+		char f[30];
+		memset(f, 0, 30);
+		strncat(f, "pgn/", 5);
+		strncat(f, date, strlen(date)+1);
+		strncat(f, "_", 2);
+		strncat(f, starttime, strlen(starttime)+1);
+		strncat(f, ".pgn", 5);
+		strrep(f, ':', '.');
+		strcpy(po.fp, f);
+	} else 	strcpy(po.fp, fp);
 	return po;
+}
+
+// 
+// read in input until it hits '1', '[', or EOF
+// 1 -> no header
+// '[' -> start reading header
+// EOF -> no pgn found
+//
+
+bool
+readPGN(FILE *in, PGNoutput *po) 
+{
+	char c, d;
+	char inp[PGNHEADERSIZE]; //should only ever be as large as the largest header
+	while (1) {
+		c = fgetc(in);
+		if (c=='1') goto READPGNBODY; // no header 
+		if (c=='[') break; // header
+		if (c==EOF) return false;
+	}
+
+	ungetc(c, in);
+	// Fill up the headers
+	/*
+	"[Event \"%s\"] \n", po.header.event);
+	"[Site \"%s\"] \n", po.header.site);
+	"[Date \"%s\"]\n", po.header.date);
+	"[Round \"%s\"]\n", po.header.round);
+	"[White \"%s\"]\n", po.header.white);
+	"[Black \"%s\"]\n", po.header.black);
+	"[Result \"%s\"]\n", po.header.result);
+	*/
+	// TODO error handling
+	fgets(inp, PGNHEADERSIZE, in);
+	strcpy(po->header.event, strchr(inp, '"')+1);
+	strrep(po->header.event, '"', 0); // terminate the string at the next "
+	fgets(inp, PGNHEADERSIZE, in);
+	strcpy(po->header.site, strchr(inp, '"')+1);
+	strrep(po->header.site, '"', 0); // terminate the string at the next "
+	fgets(inp, PGNHEADERSIZE, in);
+	strcpy(po->header.date, strchr(inp, '"')+1);
+	strrep(po->header.date, '"', 0); // terminate the string at the next "
+	fgets(inp, PGNHEADERSIZE, in);
+	strcpy(po->header.round, strchr(inp, '"')+1);
+	strrep(po->header.round, '"', 0); // terminate the string at the next "
+	fgets(inp, PGNHEADERSIZE, in);
+	strcpy(po->header.white, strchr(inp, '"')+1);
+	strrep(po->header.white, '"', 0); // terminate the string at the next "
+	fgets(inp, PGNHEADERSIZE, in);
+	strcpy(po->header.black, strchr(inp, '"')+1);
+	strrep(po->header.black, '"', 0); // terminate the string at the next "
+	fgets(inp, PGNHEADERSIZE, in);
+	strcpy(po->header.result, strchr(inp, '"')+1);
+	strrep(po->header.result, '"', 0); // terminate the string at the next "
+	// discard everything else
+	while (1) {
+		c = fgetc(in);
+		if (c=='\n') continue; // skip this line
+		if (c=='1') break; // found the body
+		while ((d=fgetc(in))!='\n' && d!=EOF); // go to next line	
+	}
+
+READPGNBODY:
+	ungetc(c, in);
+	memset(po->pgn, 0, PGNSTRINGSIZE);
+	// fill in pgn
+	for(int i=0; i<PGNSTRINGSIZE; i++) {
+		c = fgetc(in);
+		if (c==EOF) return false; // body ended prematurely
+		if (c=='\n') c=' ';
+		po->pgn[i] = c;
+		if (c=='*') break; // all exit cases, *, 1-0, 0-1, 1/2
+		if (c=='-'&&po->pgn[i-1]!='O'){
+			while((c=fgetc(in))!=EOF && c!='\n') po->pgn[++i] = c; // append the rest
+			break;
+		}
+	}
+	return true;
+}
+
+bool
+parsePGN(PGNoutput po, Boardstate *bs, bool step)
+{
+	//parse pgn as input
+	char white[9], black[9];
+	Coord from, to;
+	char *pos = po.pgn;
+	U8 diff;
+
+	while (1) {
+		pos = strchr(pos, '.') + 2;
+		white[0] = 0;
+		black[0] = 0;
+		diff = strchr(pos, ' ')-pos;
+		if (diff==0) break; // end of input
+		strncat(white, pos, diff); // copy one input across
+		pos+=diff+1;
+		diff = strchr(pos, ' ')-pos;
+		if (diff==0) break; // end of input
+		strncat(black, pos, diff); // copy one input across
+		pos+=diff+1;
+		if (*white=='1' || *white=='0' || *white=='*') return true; // end of input
+		parseInput(white, &from, &to); //TODO error checking
+		movePiece(from, to, false);
+		if (step) {
+			printBoard(*bs);
+			getchar();
+		}
+		bs->blackplaying=!bs->blackplaying; // switch players
+		if (*black=='1' || *black=='0' || *black=='*') return true; // end of input
+		parseInput(black, &from, &to); //TODO error checking
+		movePiece(from, to, false);
+		if (step) {
+			printBoard(*bs);
+			getchar();
+		}
+		bs->blackplaying=!bs->blackplaying; // switch players
+	}
+	return false;
 }
 
 bool
@@ -158,9 +285,8 @@ APPENDEND: // TODO change more stuff to goto here to skip over more unneccessary
 bool
 flushPGN(Boardstate bs, PGNoutput po)
 {
-
 	FILE *fp = fopen(po.fp, "w"); // needs to be rewritten each turn
-	fprintf(fp, "[Event \"%s\"]\n", po.header.event);
+	fprintf(fp, "[Event \"%s\"]\n", "a");
 	fprintf(fp, "[Site \"%s\"]\n", po.header.site);
 	fprintf(fp, "[Date \"%s\"]\n", po.header.date);
 	fprintf(fp, "[Round \"%s\"]\n", po.header.round);
@@ -171,8 +297,8 @@ flushPGN(Boardstate bs, PGNoutput po)
 	fprintf(fp, "[Time \"%s\"]\n\n", po.header.time);
 
 	if (inCheck(bs)) {
-		if (inCheckMate(bs)) po.header.result = bs.blackplaying?"0-1":"1-0";
-	} else 	if (inStaleMate(bs)) po.header.result = "1/2-1/2";
+		if (inCheckMate(bs)) strcpy(po.header.result, bs.blackplaying?"0-1":"1-0");
+	} else 	if (inStaleMate(bs)) strcpy(po.header.result, "1/2-1/2");
 
 	strncat(po.pgn, po.header.result, 8); // append the result
 
@@ -185,9 +311,6 @@ bool
 dumpPGN(Boardstate bs, PGNoutput po) // write with flushPGN and then free memory
 {
 	flushPGN(bs, po);
-	free(po.header.date);
-	free(po.header.time);
-	free(po.header.site);
 	free(po.fp);
 	return true;
 }

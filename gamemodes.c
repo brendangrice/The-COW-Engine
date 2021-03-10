@@ -19,7 +19,7 @@ localMultiplayer(Boardstate *currBoard)
 		result = parseInput(s, &from, &to);
 		if (result==2) break; // quit
 		if (!result) continue; // if it successfully parsed
-		movePiece(from, to); // actually move the piece and update currBoard
+		movePiece(from, to, true); // actually move the piece and update currBoard
 
 		currBoard->blackplaying=!currBoard->blackplaying; // switch players
 		if(inCheckMate(*currBoard)) {

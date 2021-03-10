@@ -17,22 +17,102 @@ const U8 ltoe[] = { // lookup table for converting letters to enum representatio
 };
 #undef _
 
-int 
-main() 
+// START OF ARGP
+
+// read in PGN file and be able to play that out
+//  -> have another optional arg for single stepping through pgn input
+
+const char *argp_program_version = "<The COW Engine v0.91>";
+const char *argp_prgram_bug_address = "<https://github.com/brendangrice/The-COW-Engine>";
+
+static char args_doc[] = "[FILE]";
+
+static char doc[] = "Plays Chess.\nWith FILE try to interpret FILE as PGN. When FILE is - read standard input as PGN\v\nPlease report any bugs to <https://github.com/brendangrice/The-COW-Engine>";
+
+static struct argp_option options[] = {
+	{"step", 's', 0, OPTION_ARG_OPTIONAL, "Steps through the moves when viewing a PGN file"},
+	{"output", 'o', "FILE", 0, "Output PGN notation to specified FILE instead of standard date notation"},
+	{ 0 }
+};
+
+struct arguments 
 {
-	setBitBoard();
+	char *args;
+	int step;
+	char *output_file;
+};
+
+static error_t
+parse_opt (int key, char *arg, struct argp_state *state)
+{
+	struct arguments *arguments = state->input;
+
+	switch(key) {
+		case('s'):
+			arguments->step = 1;
+			break;
+		case('o'):
+			arguments->output_file = arg;
+			break;
+
+		case(ARGP_KEY_ARG):
+			if (state->arg_num >= 1) argp_usage(state); // exit here, only takes one input
+			arguments->args = arg;
+			break;
+		default:
+			return ARGP_ERR_UNKNOWN;
+		}
+	return 0;
+}
+
+
+static struct argp argp = {options, parse_opt, args_doc, doc};
+
+// END OF ARGP
+
+int 
+main(int argc, char **argv) 
+{
+	// if one argument is passed try and take it as input
+	struct arguments arguments;
+	arguments.args = NULL;
+	arguments.step = 0;
+	arguments.output_file = NULL;
+
+	argp_parse(&argp, argc, argv, 0, 0, &arguments);
+
+	if (arguments.args!=NULL) {
+		setBitBoard();
+		FILE *in;
+	       	if (strcmp(arguments.args, "-")==0) {
+			in = stdin;	
+		} else	in = fopen(arguments.args, "r"); // TODO error checking
+		PGNoutput haba = makePGN(NULL, NULL, NULL, NULL);
+		readPGN(in, &haba);
+		parsePGN(haba, &currBoard, arguments.step);
+		printf("Event: %s\n", haba.header.event);
+		printf("Site: %s\n", haba.header.site);
+		printf("Date: %s\n", haba.header.date);
+		printf("Round: %s\n", haba.header.round);
+		printf("White: %s\n", haba.header.white);
+		printf("Black: %s\n", haba.header.black);
+		printf("Result: %s\n\n", haba.header.result);
+		printBoard(currBoard);
+		return 0;
+	}
+	// add stepping
 
 	char inp[2]; // input
 	while (1) {
 
-		setBitBoard();
+		setBitBoard(); // needs to be reset for every game
 		puts("Select your gamemode.");
 		puts("Local multiplayer: 1");
 		puts("Quit: q");
 		
 		readInput(inp, 2);
 		if (*inp == 'Q' || *inp == 'q') return 0;
-		po = makePGN("1", "white", "black");
+		po = makePGN("1", "white", "black", arguments.output_file);
 		switch(*inp) {
 			case('1'):
 				localMultiplayer(&currBoard);
@@ -43,6 +123,7 @@ main()
 		}
 		dumpPGN(currBoard, po);
 	}
+	return 0;
 }
 
 inline void strrep(char *s, char pre, char post) // string replace
@@ -351,18 +432,19 @@ readInput(char *s, U8 strsize)
 
 #define ATOC(A, B) ('a'-A+7+((B)-'0'-1)*8) // array to coordinate
 #define INBOUNDS(A, B) ( ( (A>='a' && A<='z')|(A>='A' && A<='Z') ) && (B>='1' && B<='9') )
-bool
-parseInput(char *s, Coord *from, Coord *to) // used with stdin input
+U8
+parseInput(char *s, Coord *from, Coord *to) // used with stdin input TODO USE #DEFINE FLAGS FOR RETURN VALUES
 {
+	strrm(s, 'x'); // remove extra symbols
+	strrm(s, '+');
+	strrm(s, '#');
+	strrm(s, ' ');
+
 	U8 len = strlen(s);
 	U8 file;
 	U64 p = 1ULL;
 	Coord temp;
 	Board b, t;
-
-	strrm(s, 'x'); // remove extra symbols
-	strrm(s, '+');
-	strrm(s, '#');
 
 	if (strcmp(s, "O-O")==0) {
 		// check which player is trying to castle
@@ -459,7 +541,7 @@ parseInput(char *s, Coord *from, Coord *to) // used with stdin input
 #undef INBOUNDS
 
 bool 
-movePiece(Coord from, Coord to) // works exclusively with the current board
+movePiece(Coord from, Coord to, bool PGN) // works exclusively with the current board
 {
 	Boardstate newbs = makeBoardstate(NULL, 0, 0); // new boardstate
 	if (!fauxMove(from, to, currBoard, &newbs)) {
@@ -473,8 +555,10 @@ movePiece(Coord from, Coord to) // works exclusively with the current board
 
 	free(newbs.bitboard);
 
-	appendMovePGN(prevBoard, currBoard, &po, from, to);
-	flushPGN(currBoard, po);
+	if (PGN) {
+		appendMovePGN(prevBoard, currBoard, &po, from, to);
+		flushPGN(currBoard, po);
+	}
 
 	return true;
 }

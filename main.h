@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <argp.h>
 
 #ifndef MAIN_H
 #define MAIN_H
@@ -63,8 +64,8 @@ U8 iterateVector(Boardstate bs, Board fromvector, Board tovector, Coord *co, U8 
 void printBoard(Boardstate bs); // prints off the bitboard according to the internal player boolean
 void printHighlightBoard(Boardstate bs, Board highlights); // prints a board but with highlighted features based on the Board given
 U8 readInput(char *s, U8 strsize); //reads input and clears stdin. Returns the number of chars read in
-bool parseInput(char *s, Coord *from, Coord *to); //parses the string s according to algebraic notation and returns from and to as read in from s. Returns a boolean whether it can successfully parse or not
-bool movePiece(Coord from, Coord to); // returns true if the piece moved from [from] to [to], assumes currBoard
+U8 parseInput(char *s, Coord *from, Coord *to); //parses the string s according to algebraic notation and returns from and to as read in from s. Returns a boolean whether it can successfully parse or not
+bool movePiece(Coord from, Coord to, bool PGN); // returns true if the piece moved from [from] to [to], assumes currBoard
 bool fauxMove(Coord from, Coord to, Boardstate bs, Boardstate *nbs); // returns a board nbs as if the move had been executed, if its an illegal move nbs is set as bs. Boolean represents whether it was successful or not
 char findPiece(Coord pos, U8 *piece, bool *colourblack, Board *bitboard); //returns a char representation of a piece for printing. A number as per the enum and a boolean on the colour of the piece. takes coordinate (0-63)
 Coord btoc(Board b); // Board to Coord, returns the smallest coord with a piece on it on that board
