@@ -37,4 +37,9 @@ typedef struct {
 } TransitionTable;
 */
 
+struct MoveStack{
+	U8 data;
+	struct MoveStack* next;
+};
+
 #endif
