@@ -202,45 +202,45 @@ calculateMaterialAdvantage(Boardstate state)
 	// Get count of each type of piece on the board
 	int totalPawns = numberOfBits(state.bitboard[pawn]);
 	int totalQueens = numberOfBits(state.bitboard[queen]);
-    int totalBishops = numberOfBits(state.bitboard[bishop]);
-    int totalKnights = numberOfBits(state.bitboard[knight]);
-    int totalRooks = numberOfBits(state.bitboard[rook]);
-    int totalKings = numberOfBits(state.bitboard[king]);
+	int totalBishops = numberOfBits(state.bitboard[bishop]);
+	int totalKnights = numberOfBits(state.bitboard[knight]);
+	int totalRooks = numberOfBits(state.bitboard[rook]);
+	int totalKings = numberOfBits(state.bitboard[king]);
 
-	// Distingush between white and black pawns
+	    // Distingush between white and black pawns
 
-	// pawns
-    int blackPawns = numberOfBits(state.bitboard[black]&state.bitboard[pawn]);
-    int whitePawns = totalPawns-blackPawns;
+	    // pawns
+	int blackPawns = numberOfBits(state.bitboard[black]&state.bitboard[pawn]);
+	int whitePawns = totalPawns-blackPawns;
 
-    // queens
-    int blackQueens = numberOfBits(state.bitboard[black]&state.bitboard[queen]);
-    int whiteQueens = totalQueens-blackQueens;
+	// queens
+	int blackQueens = numberOfBits(state.bitboard[black]&state.bitboard[queen]);
+	int whiteQueens = totalQueens-blackQueens;
 
 
-    // bishops
-    int blackBishops = numberOfBits(state.bitboard[black]&state.bitboard[bishop]);
-    int whiteBishops = totalBishops-blackBishops;
+	// bishops
+	int blackBishops = numberOfBits(state.bitboard[black]&state.bitboard[bishop]);
+	int whiteBishops = totalBishops-blackBishops;
 
-    // knights
-    int blackKnights = numberOfBits(state.bitboard[black]&state.bitboard[knight]);
-    int whiteKnights = totalKnights-blackKnights;
+	// knights
+	int blackKnights = numberOfBits(state.bitboard[black]&state.bitboard[knight]);
+	int whiteKnights = totalKnights-blackKnights;
 
-    // rooks
-    int blackRooks = numberOfBits(state.bitboard[black]&state.bitboard[rook]);
-    int whiteRooks = totalRooks-blackRooks;
+	// rooks
+	int blackRooks = numberOfBits(state.bitboard[black]&state.bitboard[rook]);
+	int whiteRooks = totalRooks-blackRooks;
 
-    // kings
-    int blackKings = numberOfBits(state.bitboard[black]&state.bitboard[king]);
-    int whiteKings = totalKings-blackKings;
+	// kings
+	int blackKings = numberOfBits(state.bitboard[black]&state.bitboard[king]);
+	int whiteKings = totalKings-blackKings;
 
-	// Calculate Black and White material value using the count of pieces that they have
-	// multiplied by general piece value
-    int whiteMaterial = whitePawns + (whiteKnights * 3) + (whiteBishops * 3) + (whiteRooks * 5) + (whiteQueens * 9) + (whiteKings * 100);
-    int blackMaterial = blackPawns + (blackKnights * 3) + (blackBishops * 3) + (blackRooks * 5) + (blackQueens * 9) + (blackKings * 100);
+	    // Calculate Black and White material value using the count of pieces that they have
+	    // multiplied by general piece value
+	int whiteMaterial = whitePawns + (whiteKnights * 3) + (whiteBishops * 3) + (whiteRooks * 5) + (whiteQueens * 9) + (whiteKings * 100);
+	int blackMaterial = blackPawns + (blackKnights * 3) + (blackBishops * 3) + (blackRooks * 5) + (blackQueens * 9) + (blackKings * 100);
 
-	// return the difference of material value
-    return whiteMaterial - blackMaterial;
+	    // return the difference of material value
+	return whiteMaterial - blackMaterial;
 }
 
 float

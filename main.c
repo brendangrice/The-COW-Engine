@@ -16,13 +16,15 @@ const U8 ltoe[] = { // lookup table for converting letters to enum representatio
 };
 #undef _
 
+// TODO FIX FAUXMOVE PAWN PROMOTION
+
 int 
 main() 
 {	
 	char inp[2]; // input
 	while (1) {
-		setBitBoard();
-		puts("Select your gamemode.");
+		setBitBoardFromFEN();
+	       	puts("Select your gamemode.");
 		puts("Local multiplayer: 1");
 		puts("Local AI: 2");
 		puts("Quit: q");
@@ -84,13 +86,10 @@ setBitBoard()
 void
 setBitBoardFromFEN()
 {
-	char *FEN = DEFAULT;
-	currBoard.movementflags=0xF0; // set castling to be available for both players
-	currBoard.bitboard = malloc(BITBOARDSIZE);
-
-	for (int i = 0; i < BITBOARDELEMENTS; i++) {
-		currBoard.bitboard[i] = 0;		
-	}
+	prevBoard = makeBoardstate(NULL, 0, 0);
+	currBoard = makeBoardstate(NULL, 0, 0);
+	
+	char *FEN = FENBOARDDEFAULT;
 	currBoard = parseFEN(FEN, currBoard);
 }
 
@@ -98,8 +97,7 @@ Boardstate
 makeBoardstate(Board *bitboard, U8 movementflags, bool blackplaying)
 {
 	Boardstate newbs;
-	newbs.bitboard = malloc(BITBOARDSIZE);
-	newbs.bitboard = memset(newbs.bitboard, 0, BITBOARDSIZE);
+	memset(newbs.bitboard, 0, BITBOARDSIZE);
 	if (bitboard!=NULL) memcpy(newbs.bitboard, bitboard, BITBOARDSIZE);
 	newbs.movementflags = movementflags;
 	newbs.blackplaying = blackplaying;
@@ -110,7 +108,7 @@ makeBoardstate(Board *bitboard, U8 movementflags, bool blackplaying)
 Boardstate *
 cpyBoardstate(Boardstate *to, Boardstate from)
 {
-		to->bitboard = memcpy(to->bitboard, from.bitboard, BITBOARDSIZE);
+		memcpy(to->bitboard, from.bitboard, BITBOARDSIZE);
 		to->movementflags = from.movementflags;
 		to->blackplaying = from.blackplaying;
 		return to;
@@ -243,7 +241,7 @@ iterateVector(Boardstate bs, Board fromvector, Board tovector, Coord *co, U8 pas
 		coverage = calculateMovementVector(bs, pos)&(1ULL<<tovector); // only try to go where it can
 		for (coverage = tovector; coverage; coverage&=(coverage-1)) {
 			pos2 = btoc(coverage);
-			if(fauxMove(pos, pos2, bs, NULL)) {
+			if(fauxMove(pos, pos2, bs, NULL, NULL)) {
 				*co = pos;
 				if (pass&1) return 1;
 				if (pass&2 && count==1) return 2;
@@ -397,62 +395,110 @@ void prettyPrintBoard(Boardstate bs)
 		  +---+---+---+---+---+---+---+---+
 		1 | R | N | B | Q | K | B | N | R |
 		  +---+---+---+---+---+---+---+---+
-			A   B   C   D   E   F   G   H
+      		    A   B   C   D   E   F   G   H
 	*/
-	bool change = false;
-	printf("\n   +---+---+---+---+---+---+---+---+");
+	const char *linebreak = "\n   +---+---+---+---+---+---+---+---+";
+
+	char c;
 	for(int i = 0 ; i < 64; i++)
 	{
-		if(!(i%8))
-		{
-			bs.blackplaying ? printf("\n %c |",'1'+(i/8)) : printf("\n %c |",'8'-(i/8));;
-			change = !change;
-			for(int j = i; j < i+8; j++)
-			{
-				char c  = bs.blackplaying ? findPiece(j, NULL, NULL, bs.bitboard) : findPiece(63-j, NULL, NULL, bs.bitboard);
-				if(c == '.') c = ' '; 
-				change ? printf(" %c |", c) : printf(" %c |", c); // maybe shade the dark squares in the future?
-				change = !change;
-			}				
-			printf("\n   +---+---+---+---+---+---+---+---+");	
+		if (!(i%8)) {
+			puts(linebreak);
+			putchar(' ');
+			putchar(bs.blackplaying?'1'+(i/8):'8'-(i/8));
+			putchar(' ');
+			putchar('|');
+			putchar(' ');
 		}
+		c = bs.blackplaying?findPiece(i, NULL, NULL, bs.bitboard):findPiece(63-i, NULL, NULL, bs.bitboard); // needs to read the chars in a different order depending how its printing
+		if (c=='.') c = ' ';
+		putchar(c);
+		putchar(' ');
+		putchar('|');
+		putchar(' ');
+
 	}
-	bs.blackplaying ? printf("\n     H   G   F   E   D   C   B   A  \n") : printf("\n     A   B   C   D   E   F   G   H  \n");
+	puts(linebreak);
+	puts(bs.blackplaying ? "\n     H   G   F   E   D   C   B   A  \n" : "\n     A   B   C   D   E   F   G   H  \n");
 }
 void
 printBoard(Boardstate bs)
 {
 	char c;
-	if (bs.blackplaying) { // print the board upside-down
-		for (int i = 0; i < 64; i++) {
-			if (!(i%8))  { 
-				putchar('\n');
-				putchar('1'+(i/8));
-				putchar(' ');
-				putchar(' ');
-			}
-			c = findPiece(i, NULL, NULL, bs.bitboard);
-			if (c=='.' && (i+(i/8))&1) c = ',';
-			putchar(c);
+	for (int i = 0; i < 64; i++) {
+		if (!(i%8)) { 
+			putchar('\n');
+			putchar(bs.blackplaying?'1'+(i/8):'8'-(i/8));
+			putchar(' ');
 			putchar(' ');
 		}
-		puts("\n\n%  H G F E D C B A\n");
-	} else { // print the board the right way around
-		for (int i = 0; i < 64; i++) {
-			if (!(i%8))  { 
-				putchar('\n');
-				putchar('8'-(i/8));
-				putchar(' ');
-				putchar(' ');
-			}
-			c = findPiece(63-i, NULL, NULL, bs.bitboard);
-			if (c=='.' && (i+(i/8))&1) c = ',';
-			putchar(c);
-			putchar(' ');
-		}
-		puts("\n\n%  A B C D E F G H\n");
+		c = bs.blackplaying?findPiece(i, NULL, NULL, bs.bitboard):findPiece(63-i, NULL, NULL, bs.bitboard); // needs to read the chars in a different order depending how its printing
+		if (c=='.' && (i+(i/8))&1) c = ',';
+		putchar(c);
+		putchar(' ');
 	}
-	puts("\n");
+	puts(bs.blackplaying?"\n\n%  H G F E D C B A\n":"\n\n%  A B C D E F G H\n");
+}
+
+void
+printHighlightBoard(Boardstate bs, Board highlights)
+{
+	/*
+		  +---+---+---+---+---+---+---+---+
+		8 | r |   | b | q | k | b | n | r |
+		  +---+---+---+---+---+---+---+---+
+		7 | p | p | p | p | p | p | p | p |
+	 	  +---+---+---+---+---+---+---+---+
+		6 |   |   | n |   |   |   |   |   |
+		  +---+---+---+---+---+---+---+---+
+		5 |   |   |   |   |   |   |   |   |
+		  +---+---+---+---+---+---+---+---+
+		4 |   |   |   |   | P |   |   |   |
+		  +---+---+---+---+---+---+---+---+
+		3 |   |   |   |   |   |   |   |   |
+		  +---+---+---+---+---+---+---+---+
+		2 | P | P | P | P |   | P | P | P |
+		  +---+---+---+---+---+---+---+---+
+		1 | R | N | B | Q | K | B | N | R |
+		  +---+---+---+---+---+---+---+---+
+      		    A   B   C   D   E   F   G   H
+	*/
+
+	const U8 boardsize = BOARDSIZE*BOARDSIZE; // 64 
+	const char *linebreak = "\n   +---+---+---+---+---+---+---+---+";
+
+	char out[64]; // array for printing
+	Coord coord;
+	char c;
+	coord = btoc(highlights);
+
+	for (int i = 0; i < boardsize; i++) { // store in character array
+		c = findPiece(i, NULL, NULL, bs.bitboard);
+		if (c=='.' && i == coord) {
+			highlights &= highlights-1;
+			coord = btoc(highlights);
+			c = 'x';
+		}
+		if (c=='.') c = ' ';
+		out[i] = c;
+	}
+
+	for (int i = 0; i < 64; i++) { // print out formatted
+		if (!(i%8)) {
+			puts(linebreak);
+			putchar(' ');
+			putchar(bs.blackplaying?'1'+(i/8):'8'-(i/8));
+			putchar(' ');
+			putchar('|');
+			putchar(' ');
+		}
+		putchar(bs.blackplaying?out[i]:out[63-i]); // prints out forwards or backwards
+		putchar(' ');
+		putchar('|');
+		putchar(' ');
+	}
+	puts(linebreak);
+	puts(bs.blackplaying ? "\n     H   G   F   E   D   C   B   A  \n" : "\n     A   B   C   D   E   F   G   H  \n");
 }
 
 
@@ -468,26 +514,6 @@ parseFEN(char *FEN, Boardstate bs)
 	bs.movementflags = 0;
 	bs.blackplaying = false;
 	
-	//printBoard(bs);
-	
-	// AFILE 8080 8080 8080 8080
-	// BFILE 4040 4040 4040 4040
-	// CFILE 2020 2020 2020 2020
-	// DFILE 1010 1010 1010 1010
-	// EFILE 0808 0808 0808 0808
-	// FFILE 0404 0404 0404 0404
-	// GFILE 0202 0202 0202 0202
-	// HFILE 0101 0101 0101 0101
-	
-	// 8RANK FF00 0000 0000 0000
-	// 7RANK 00FF 0000 0000 0000
-	// 6RANK 0000 FF00 0000 0000
-	// 5RANK 0000 00FF 0000 0000
-	// 4RANK 0000 0000 FF00 0000
-	// 3RANK 0000 0000 00FF 0000
-	// 2RANK 0000 0000 0000 FF00
-	// 1RANK 0000 0000 0000 00FF
-	
 	int rank = 8; // start on the 8 rank
 	int file = 0; // start at the A file
 	int count = 0;
@@ -497,22 +523,24 @@ parseFEN(char *FEN, Boardstate bs)
 	{
 		count = 1;
 		
+		piece = *FEN;
+		isBlack = *FEN>'R';
 		switch(*FEN)
 		{
 			// black piece
-			case 'p' : piece = 'p'; isBlack = true; break;
-			case 'r' : piece = 'r'; isBlack = true; break;
-			case 'n' : piece = 'n'; isBlack = true; break;
-			case 'b' : piece = 'b'; isBlack = true; break;
-			case 'k' : piece = 'k'; isBlack = true; break;
-			case 'q' : piece = 'q'; isBlack = true; break;
+			case 'p' : 
+			case 'r' : 
+			case 'n' : 
+			case 'b' : 
+			case 'k' : 
+			case 'q' :
 			// white piece
-			case 'P' : piece = 'P'; isBlack = false; break;
-			case 'R' : piece = 'R'; isBlack = false; break;
-			case 'N' : piece = 'N'; isBlack = false; break;
-			case 'B' : piece = 'B'; isBlack = false; break;
-			case 'K' : piece = 'K'; isBlack = false; break;
-			case 'Q' : piece = 'Q'; isBlack = false; break;
+			case 'P' : 
+			case 'R' : 
+			case 'N' : 
+			case 'B' : 
+			case 'K' : 
+			case 'Q' : break;
 			// number of empty
 			case '1' : 
 			case '2' : 
@@ -526,7 +554,7 @@ parseFEN(char *FEN, Boardstate bs)
 			case '/' :
 			case ' ' : rank--; file = 0; FEN++; continue;
 			// error
-			default  : printf("\nSomething Went Wrong! %s", FEN);
+			default  : puts("\nSomething Went Wrong!"); exit(1); // cheeky exit
 		}
 		for(int i = 0; i < count; i++)
 		{
@@ -537,53 +565,32 @@ parseFEN(char *FEN, Boardstate bs)
 				char letter = 'A'+file;
 				char number = '0'+rank;
 				
-				U64 FILE_ID = 0;
-				U64 RANK_ID = 0;
+				U64 file_ID = 0;
+				U64 rank_ID = 0;
 				
-				int type = 0;
+				U8 type = 0;
 				
-				switch(letter)
-				{
-					case 'A' : FILE_ID = AFILE; break;
-					case 'B' : FILE_ID = BFILE; break;
-					case 'C' : FILE_ID = CFILE; break;
-					case 'D' : FILE_ID = DFILE; break;
-					case 'E' : FILE_ID = EFILE; break;
-					case 'F' : FILE_ID = FFILE; break;
-					case 'G' : FILE_ID = GFILE; break;
-					case 'H' : FILE_ID = HFILE; break;
-					default  : printf("\nSomething Went Wrong");
-				}
-				switch(number)
-				{
-					case '1' : RANK_ID = RANK1; break;
-					case '2' : RANK_ID = RANK2; break;
-					case '3' : RANK_ID = RANK3; break;
-					case '4' : RANK_ID = RANK4; break;
-					case '5' : RANK_ID = RANK5; break;
-					case '6' : RANK_ID = RANK6; break;
-					case '7' : RANK_ID = RANK7; break;
-					case '8' : RANK_ID = RANK8; break;
-					default  : printf("\nSomething Went Wrong");
+				if ((letter<'A') || (letter>'H')) {
+					puts("\nSomething Went Wrong"); 
+					exit(1); // cheeky exit
 				}
 				
-				switch(piece)
-				{
-					case 'p' : 
-					case 'P' : type = pawn; break;
-					case 'r' :
-					case 'R' : type = rook; break;
-					case 'n' :
-					case 'N' : type = knight; break;
-					case 'b' :
-					case 'B' : type = bishop; break;
-					case 'q' :
-					case 'Q' : type = queen; break;
-					case 'k' :
-					case 'K' : type = king; break;
-					default  : printf("\nSomething Went Wrong");
+				file_ID = HFILE*(1<<('H'-letter));
+
+				if ((number<'1') || (number>'8')) {
+					puts("\nSomething Went Wrong"); 
+					exit(1); // cheeky exit
 				}
-				U64 square = (FILE_ID&RANK_ID);
+				
+				rank_ID = (RANK1*1ULL)<<(8*(number-'1'));
+
+				type = ltoe[(U8) piece];
+				if (type == nopiece) {
+					puts("\nSomething Went Wrong"); 
+					exit(1);
+				}
+
+				U64 square = (file_ID&rank_ID);
 				bs.bitboard[type] += square;
 				if(isBlack) bs.bitboard[black] += square;
 			}
@@ -595,15 +602,13 @@ parseFEN(char *FEN, Boardstate bs)
 	// combine all of the values
 	
 	bs.bitboard[total] = 	bs.bitboard[pawn]|
-							bs.bitboard[rook]|
-							bs.bitboard[knight]|
-							bs.bitboard[bishop]|
-							bs.bitboard[queen]|
-							bs.bitboard[king];
-	//printBoard(bs);
-	
+				bs.bitboard[rook]|
+				bs.bitboard[knight]|
+				bs.bitboard[bishop]|
+				bs.bitboard[queen]|
+				bs.bitboard[king];
 	// assign side to move
-	*FEN == 'b' ? (bs.blackplaying = true) : (bs.blackplaying = false); 
+	bs.blackplaying = (*FEN == 'b');
 	FEN+=2;
 
 	// assign castling rights
@@ -625,45 +630,6 @@ parseFEN(char *FEN, Boardstate bs)
 	
 	return bs;
 }
-
-void
-printHighlightBoard(Boardstate bs, Board highlights)
-{
-	const U8 boardsize = 64; 
-	char out[64]; // array for printing
-	Coord coord;
-	char c;
-	coord = btoc(highlights);
-	for (int i = 0; i < boardsize; i++) { // store in character array
-		c = findPiece(i, NULL, NULL, bs.bitboard);
-		if (c=='.' && i == coord) {
-			highlights &= highlights-1;
-			coord = btoc(highlights);
-			c = 'x';
-		}
-		if (c=='.' && (i+(i/8))&1) c = ',';
-		out[i] = c;
-	}
-
-	char *row = "\n\n%  A B C D E F G H\n"; // needs to print out differently depending on orientation
-
-	if (bs.blackplaying) {
-		row = "\n\n%  H G F E D C B A\n";
-	}
-
-	for (int i = 0; i < 64; i++) { // print out formatted
-		if (!(i%8)) {
-			putchar('\n');
-			putchar(bs.blackplaying?'1'+(i/8):'8'-(i/8));
-			putchar(' ');
-			putchar(' ');
-		}
-		putchar(bs.blackplaying?out[i]:out[63-i]); // prints out forwards or backwards
-		putchar(' ');
-	}
-	puts(row);
-}
-
 U8 // return number of chars read in
 readInput(char *s, U8 strsize) 
 {
@@ -703,7 +669,7 @@ parseInput(char *s, Coord *from, Coord *to) // used with stdin input
 			*from = 3;
 			*to = 1;
 		}
-		return fauxMove(*from, *to, currBoard, NULL);
+		return fauxMove(*from, *to, currBoard, NULL, NULL);
 	} else if (strcmp(s, "O-O-O")==0) {
 		// check which player is trying to castle
 		// fauxmove
@@ -714,7 +680,7 @@ parseInput(char *s, Coord *from, Coord *to) // used with stdin input
 			*from = 3;
 			*to = 5;
 		}
-		return fauxMove(*from, *to, currBoard, NULL);
+		return fauxMove(*from, *to, currBoard, NULL, NULL);
 	}
 
 	if (!INBOUNDS(s[len-2], s[len-1]) & (len>1)) return 0;
@@ -779,7 +745,7 @@ parseInput(char *s, Coord *from, Coord *to) // used with stdin input
 			if (!(INBOUNDS(s[1], s[2])&&(s[1]>='a'))) break;
 			*from = ATOC(s[1], s[2]);
 			findPiece(*from, &temp, NULL, currBoard.bitboard);
-			if (temp==ltoe[(U8) s[0]]) return fauxMove(*from, *to, currBoard, NULL);
+			if (temp==ltoe[(U8) s[0]]) return fauxMove(*from, *to, currBoard, NULL, NULL);
 			break;
 	}
 	return false;
@@ -787,20 +753,39 @@ parseInput(char *s, Coord *from, Coord *to) // used with stdin input
 #undef ATOC
 #undef INBOUNDS
 
+U8
+defaultPromotion() {
+	return queen;
+}
+
+U8
+getPromotion() {
+	puts("Enter which piece you want (R=1, N=2, B=3, Q=4): ");
+	char pieceno[2];
+PROMOTION:
+	readInput(pieceno, 2);
+	switch(*pieceno-'0') {
+		case(rook):
+		case(knight):
+		case(bishop):
+		case(queen):
+			return *pieceno-'0';
+			break;
+		default:
+			goto PROMOTION;
+			break;
+	}
+}
+
 bool 
-movePiece(Coord from, Coord to) // works exclusively with the current board
+movePiece(Coord from, Coord to, U8(*promote)()) // works exclusively with the current board
 {
 	Boardstate newbs = makeBoardstate(NULL, 0, 0); // new boardstate
-	if (!fauxMove(from, to, currBoard, &newbs)) {
-		free(newbs.bitboard);
-		return false;
-	}
+	if (!fauxMove(from, to, currBoard, &newbs, promote)) return false;
 
 	cpyBoardstate(&prevBoard, currBoard);
 
 	cpyBoardstate(&currBoard, newbs);
-
-	free(newbs.bitboard);
 
 	appendMovePGN(prevBoard, currBoard, &po, from, to);
 	flushPGN(currBoard, po);
@@ -808,23 +793,22 @@ movePiece(Coord from, Coord to) // works exclusively with the current board
 	return true;
 }
 
-#define FAUXMOVERET(A, B) {free(A.bitboard); return B;}
 bool
-fauxMove(Coord from, Coord to, Boardstate bs, Boardstate *nbs) // write a companion that's more efficient as this is used EVERYWHERE and has a little extra overhead than needed in some cases
+fauxMove(Coord from, Coord to, Boardstate bs, Boardstate *nbs, U8(*promote)()) // write a companion that's more efficient as this is used EVERYWHERE and has a little extra overhead than needed in some cases
 {
 	Boardstate extra = makeBoardstate(NULL, 0, 0); // new boardstate
 	if (nbs==NULL) nbs = &extra;
 	nbs = cpyBoardstate(nbs, bs);
+	if (promote == NULL) promote = defaultPromotion;
+
 	Coord frompiece, topiece, passantpiece;
 	bool fromcolourblack, tocolourblack, passantcolourblack;
 
 	findPiece(from, &frompiece, &fromcolourblack, nbs->bitboard);
 	findPiece(to, &topiece, &tocolourblack, nbs->bitboard);
-
-	if (bs.blackplaying-fromcolourblack || frompiece==nopiece || !(fromcolourblack^tocolourblack)&(topiece!=nopiece)) {
-		//printf("\nCan't move a piece that doesn't exist or take your own piece");
-       	       FAUXMOVERET(extra, false); // Can't move a piece that doesn't exist or take your own piece
-	}
+	
+       	// Can't move a piece that doesn't exist or take your own piece
+	if (bs.blackplaying-fromcolourblack || frompiece==nopiece || !(fromcolourblack^tocolourblack)&(topiece!=nopiece)) return false;
 
 	U64 p = 1ULL;
 	bool test = false;
@@ -865,21 +849,7 @@ fauxMove(Coord from, Coord to, Boardstate bs, Boardstate *nbs) // write a compan
 			// pawn has reached the end of the board 
 			// //update this to be ai friendly
 			if (test && (0==to>>3 || 7==to>>3)) {
-				puts("Enter which piece you want (R=1, N=2, B=3, Q=4): ");
-				char pieceno[2];
-PROMOTION:
-				readInput(pieceno, 2);
-				switch(*pieceno-'0') {
-					case(rook):
-					case(knight):
-					case(bishop):
-					case(queen):
-						frompiece=*pieceno;
-						break;
-					default:
-						goto PROMOTION;
-						break;
-				}
+				frompiece = promote();
 			}
 			break;
 		case(rook):
@@ -937,9 +907,7 @@ PROMOTION:
 			break;
 	}
 
-	if (!test) { // if the piece can't move there
-		FAUXMOVERET(extra, false);
-	}
+	if (!test) return false; // if the piece can't move there
 	
 	// set to piece with opposite colour. remove from piece
 	// calc attack vectors
@@ -972,7 +940,7 @@ PROMOTION:
 		nbs->bitboard[total]^=p<<from; // update total board for tracking/finding pieces
 		nbs->bitboard[total]&=(-1^p<<to);
 		
-		FAUXMOVERET(extra, false);
+		return false;
 	}
 
 	// if a king or rook succesfully moved
@@ -988,10 +956,8 @@ PROMOTION:
 		if (from==0x38) nbs->movementflags &= 0xEF;
 	}
 
-	//puts("c");
-	FAUXMOVERET(extra, true);
+	return true;
 }
-#undef FAUXMOVERET
 
 inline Coord btoc(Board b) // board to coordinate
 {
@@ -1005,7 +971,8 @@ inline Coord btoc(Board b) // board to coordinate
 // white or black board (player colour) & with king. If attack 
 // (opposite colour) & with the white/black king its under threat.
 
-inline Board getPlayerBoard(Board *bitboard, bool blackplaying) {
+inline Board getPlayerBoard(Board *bitboard, bool blackplaying) 
+{
 	return ((blackplaying-1)&bitboard[total])^bitboard[black];
 }
 

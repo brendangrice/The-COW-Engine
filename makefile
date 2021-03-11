@@ -1,4 +1,4 @@
-OBJS		= gamemodes.o moves.o pgn.o main.o
+OBJS		= gamemodes.o moves.o pgn.o eval.o ai.o main.o
 CFLAGS		= -g -Wall -D DEBUG
 
 

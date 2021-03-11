@@ -22,15 +22,6 @@
 // when they need to constantly be re-evaluated anyways?
 // mostly used for debugging
 
-#define BOARDSIZE 8 // 8x8 Square
-#define CHESSPIECES 6 // white and black
-#define PLAYERS 2 // number of players
-#define BITBOARDELEMENTS (CHESSPIECES+(PLAYERS-1)+1) // length of enum
-#define BITBOARDSIZE (BITBOARDELEMENTS*sizeof(Board)) // one Board per element
-// Bitboards for each piece, 1 for every player past one, 1 more for the total board. 
-#define BOARDSTATESIZE (BITBOARDSIZE*sizeof(Board)+sizeof(U8))
-//maybe make these sizeof's into const variables to reduce the number of times sizeof is used?
-
 // file and rank constants
 
 #define AFILE 0x8080808080808080
@@ -52,7 +43,7 @@
 #define RANK1 0x00000000000000FF
 
 // FEN constants
-#define DEFAULT "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+#define FENBOARDDEFAULT "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 enum { // all available 'pieces'
 	pawn,
@@ -96,8 +87,10 @@ void printFEN(Boardstate bs, Coord from,Coord to); // print FEN of given Boardst
 void prettyPrintBoard(Boardstate bs); // print large board with defined squares
 U8 readInput(char *s, U8 strsize); //reads input and clears stdin. Returns the number of chars read in
 bool parseInput(char *s, Coord *from, Coord *to); //parses the string s according to algebraic notation and returns from and to as read in from s. Returns a boolean whether it can successfully parse or not
-bool movePiece(Coord from, Coord to); // returns true if the piece moved from [from] to [to], assumes currBoard
-bool fauxMove(Coord from, Coord to, Boardstate bs, Boardstate *nbs); // returns a board nbs as if the move had been executed, if its an illegal move nbs is set as bs. Boolean represents whether it was successful or not
+U8 defaultPromotion();
+U8 getPromotion();
+bool movePiece(Coord from, Coord to, U8(*promote)()); // returns true if the piece moved from [from] to [to], assumes currBoard
+bool fauxMove(Coord from, Coord to, Boardstate bs, Boardstate *nbs, U8(*promote)()); // returns a board nbs as if the move had been executed, if its an illegal move nbs is set as bs. Boolean represents whether it was successful or not
 char findPiece(Coord pos, U8 *piece, bool *colourblack, Board *bitboard); //returns a char representation of a piece for printing. A number as per the enum and a boolean on the colour of the piece. takes coordinate (0-63)
 Coord btoc(Board b); // Board to Coord, returns the smallest coord with a piece on it on that board
 Board getPlayerBoard(Board *bitboard, bool blackplaying); // returns the combined board for the player given

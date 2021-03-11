@@ -17,5 +17,7 @@ int getSize(struct MoveStack* root);
 bool isMoveable(Boardstate bs, int position, char piece, bool isBlack);
 struct MoveStack* possibleMoveTo(Boardstate bs, bool isBlack, U8 *from, int size);
 
+U8 piecePromotionAI();
+
 #define MAX(a,b) (((a)>(b))?(a):(b))
 #endif

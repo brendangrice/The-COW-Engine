@@ -1,3 +1,5 @@
+#include "main.h"
+
 #ifndef TYPES_H
 #define TYPES_H
 
@@ -20,8 +22,18 @@ typedef U8 Coord; //always between 0-63 to fit on the board, helps with legibili
 
 typedef U64 Board; //used for representing bitboards, helps with legibility and intent
 
+#define BOARDSIZE 8 // 8x8 Square
+#define CHESSPIECES 6 // white and black
+#define PLAYERS 2 // number of players
+
+#define BITBOARDELEMENTS (CHESSPIECES+(PLAYERS-1)+1) // length of enum
+#define BITBOARDSIZE (BITBOARDELEMENTS*sizeof(Board)) // one Board per element
+// Bitboards for each piece, 1 for every player past one, 1 more for the total board. 
+#define BOARDSTATESIZE (BITBOARDSIZE*sizeof(Board)+sizeof(U8))
+//maybe make these sizeof's into const variables to reduce the number of times sizeof is used?
+
 typedef struct {
-	Board *bitboard;
+	Board bitboard[BITBOARDELEMENTS];
 	U8 movementflags;
 	bool blackplaying;
 } Boardstate;

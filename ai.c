@@ -236,7 +236,7 @@ NegaMax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 			// create a new boardstate
 			Boardstate newbs = makeBoardstate(NULL, bs.movementflags, bs.blackplaying);
 			// ensure that the move is valid
-			if(fauxMove(one, two, bs, &newbs))
+			if(fauxMove(one, two, bs, &newbs, piecePromotionAI))
 			{
 				// flip player to move
 				newbs.blackplaying = !newbs.blackplaying; 
@@ -287,7 +287,7 @@ calculateBestMove(Boardstate bs, bool isBlack, int depth, Coord *coord1, Coord *
 			// create a new boardstate
 			Boardstate newbs = makeBoardstate(NULL, bs.movementflags, bs.blackplaying);
 			// ensure that the move is valid			
-			if(fauxMove(one, two, bs, &newbs))
+			if(fauxMove(one, two, bs, &newbs, piecePromotionAI))
 			{
 				// flip the player to move
 				newbs.blackplaying = !newbs.blackplaying;
@@ -347,4 +347,10 @@ int getSize(struct MoveStack* root)
 		root = (root)->next;
 	}	
 	return size;
+}
+
+U8
+piecePromotionAI()
+{
+	return queen; // all my homies hate knights
 }
