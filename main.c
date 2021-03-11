@@ -1,71 +1,97 @@
 #include "main.h"
 
-////
-// Maybe just update total at the end of each move instead of updating it 
-// alongside all the other pieces and movements with one or.
-// REMEMBER TO CHECK ALL THE FREE'S
-////
 Boardstate currBoard;
+Boardstate prevBoard;
+PGNoutput po;
+
+#define _ nopiece
+const U8 ltoe[] = { // lookup table for converting letters to enum representations e.g. ltoe['p'] -> pawn and ltoe['P'] -> pawn
+	_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+	_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+	_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+	_, _, _, _, _, _, bishop, _, _, _, _, _, _, _, _, king, _, _, knight, _, 
+	pawn, queen, rook, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, bishop, _,
+       	_, _, _, _, _, _, _, king, _, _, knight, _, pawn, queen, rook
+
+};
+#undef _
+
+int 
+main() 
+{	
+	char inp[2]; // input
+	while (1) {
+		setBitBoard();
+		puts("Select your gamemode.");
+		puts("Local multiplayer: 1");
+		puts("Local AI: 2");
+		puts("Quit: q");
+		
+		readInput(inp, 2);
+		if (*inp == 'Q' || *inp == 'q') return 0;
+		po = makePGN("1", "white", "black");
+		switch(*inp) {
+			case('1'):
+				localMultiplayer(&currBoard);
+				break;
+			case('2'):
+				localAI(&currBoard);
+				break;
+			default:
+				puts("Bad Input");
+				break;
+		}
+		dumpPGN(currBoard, po);
+	}
+}
+
+inline void strrep(char *s, char pre, char post) // string replace
+{
+	for (int i=0; i<strlen(s); i++) if (s[i]==pre) s[i]=post;
+}
+
+void strrm(char *s, char rm) // string remove
+{
+	U8 len = strlen(s);
+	char *ptr = s;
+	for (int i=0; ptr[i]; i++) {
+		if (ptr[i]==rm) {
+			ptr++;
+			i--;
+			len--;
+		} else 	s[i] = ptr[i];
+	}
+	s[len] = 0;
+}
+
 void
 setBitBoard()
 {
+	prevBoard = makeBoardstate(NULL, 0xF0, false);
+	currBoard = makeBoardstate(NULL, 0xF0, false);
+
+	// encoded chess board
+	// First half is black, second is white
+	currBoard.bitboard[pawn] = 0x00FF00000000FF00;
+	currBoard.bitboard[rook] = 0x8100000000000081;
+	currBoard.bitboard[knight] = 0x4200000000000042;
+	currBoard.bitboard[bishop] = 0x2400000000000024;
+	currBoard.bitboard[queen] = 0x1000000000000010;
+	currBoard.bitboard[king] = 0x0800000000000008;
+	currBoard.bitboard[black] = 0xFFFF000000000000;
+	currBoard.bitboard[total] = currBoard.bitboard[pawn]|currBoard.bitboard[rook]|currBoard.bitboard[knight]|currBoard.bitboard[bishop]|currBoard.bitboard[queen]|currBoard.bitboard[king];
+}
+void
+setBitBoardFromFEN()
+{
 	char *FEN = DEFAULT;
-	
-	//initHash();
 	currBoard.movementflags=0xF0; // set castling to be available for both players
-	//currBoard.blackplaying = false; // game starts with white
 	currBoard.bitboard = malloc(BITBOARDSIZE);
 
 	for (int i = 0; i < BITBOARDELEMENTS; i++) {
 		currBoard.bitboard[i] = 0;		
 	}
-	
-	// encoded chess board
-	// First half is black, second is white
-//	currBoard.bitboard[pawn] = 0xF000000000000000;
-//	currBoard.bitboard[pawn] = 0x00FF00000000FF00;
-//	currBoard.bitboard[rook] = 0x8100000000000081;
-//	currBoard.bitboard[knight] = 0x4200000000000042;
-//	currBoard.bitboard[bishop] = 0x2400000000000024;
-//	currBoard.bitboard[queen] = 0x1000000000000010;
-//	currBoard.bitboard[king] = 0x0800000000000008;
-//	currBoard.bitboard[black] = 0xFFFF000000000000;
-//	currBoard.bitboard[total] = currBoard.bitboard[pawn]|currBoard.bitboard[rook]|currBoard.bitboard[knight]|currBoard.bitboard[bishop]|currBoard.bitboard[queen]|currBoard.bitboard[king];
 	currBoard = parseFEN(FEN, currBoard);
-}
-
-int 
-main() 
-{
-	//setBitBoard();
-	//TTclear();
-	char c; // input
-	while (1) {
-
-	setBitBoard();
-	
-	puts("Select your gamemode.");
-	puts("Local multiplayer: 1");
-	puts("Local AI: 2");
-	puts("Quit: q");
-	
-	scanf("%c", &c);
-
-		switch(c) {
-			case('1'):
-				localMultiplayer();
-				break;
-			case('2'):
-				localAI();
-				break;
-			case('q'):
-				return 0;
-				break;
-			case('Q'):
-				return 0;
-				break;
-		}
-	}
 }
 
 Boardstate
@@ -90,92 +116,6 @@ cpyBoardstate(Boardstate *to, Boardstate from)
 		return to;
 }
 
-void
-localAI()
-{
-	currBoard.blackplaying?puts("\nBlack to play"):puts("\nWhite to play");
-	prettyPrintBoard(currBoard);
-	// user input
-	// every time the user inputs a new move the attack vectors need to be reevaluated.
-	bool test;
-	U8 from, to;
-	for(;;) { // strange things are happening 
-LOOP: // works ok to me		
-		if(!currBoard.blackplaying) // then white must be playing
-		{
-			printf("\a"); // notiy that they are to input
-			test = parseInput(&from, &to); //take their input
-		}
-		else{ // otherwise let the bot play
-			test = calculateBestMove(currBoard, currBoard.blackplaying, 3, &from, &to);			
-		}
-		
-		if (!test) goto LOOP;
-		test = movePiece(from, to);
-		if (!test) goto LOOP;
-		
-		currBoard.blackplaying=!currBoard.blackplaying; // switch players
-		
-		if(inCheckMate(currBoard)) {
-			prettyPrintBoard(currBoard);
-			puts("Checkmate");
-			break; // end game
-		}
-		
-		if(inStaleMate(currBoard)) {
-			prettyPrintBoard(currBoard);
-			puts("Stalemate");
-			break; // end game
-		}
-		currBoard.blackplaying?puts("\nBlack to play"):puts("\nWhite to play");
-		if(inCheck(currBoard)) puts("Check");
-		prettyPrintBoard(currBoard);
-	}
-	return;
-}
-
-void
-localMultiplayer()
-{
-	puts("White to play");
-	printBoard(currBoard);
-	//U64 key = generateHash(currBoard, -1);
-	//printf("\nKey : %llx	\n", key);
-	printFEN(currBoard, -1, -1);
-	// user input
-	// every time the user inputs a new move the attack vectors need to be reevaluated.
-	bool test;
-	U8 from, to;
-	for(;;) { // strange things are happening 
-LOOP: // works ok to me
-		test = parseInput(&from, &to);
-		if (!test) goto LOOP;
-		test = movePiece(from, to);
-		if (!test) goto LOOP;
-		currBoard.blackplaying=!currBoard.blackplaying; // switch players
-		if(inCheckMate(currBoard)) {
-			printBoard(currBoard);
-			printFEN(currBoard, from, to);
-			puts("Checkmate");
-			break; // end game
-		}
-		if(inStaleMate(currBoard)) {
-			printBoard(currBoard);
-			printFEN(currBoard, from, to);
-			puts("Stalemate");
-			break; // end game
-		}
-		currBoard.blackplaying?puts("\nBlack to play"):puts("\nWhite to play");
-		if(inCheck(currBoard)) puts("Check");
-		printBoard(currBoard);
-		printFEN(currBoard, from, to);
-		//key = generateHash(currBoard, to);
-		//printf("\nKey : %llx\n", key);
-	}
-	return;
-}
-
-//add something here for not having to take piece or black
 char 
 findPiece(Coord pos, U8 *piece, bool *colourblack, Board *bitboard) //returns a char representation of a piece for printing. A number as per the enum and a boolean on the colour of the piece.
 {
@@ -253,6 +193,65 @@ calculateAttackVectors(Board *bitboard, bool blackplaying) //returns an attack v
 		}
 	}
 	return vector;
+}
+
+Board
+calculateMovementVector(Boardstate bs, Coord pos) //returns a vector for where a singular piece can move
+{
+	Board vector;
+	U8 piece = nopiece;
+	bool colour;
+	findPiece(pos, &piece, &colour, bs.bitboard);
+	switch(piece) {
+		case(pawn):
+			if (colour) {
+				blackPawnMovement(pos, 0, bs, &vector);
+			} else	whitePawnMovement(pos, 0, bs, &vector);
+			break;
+		case(rook):
+			rookMovement(pos, 0, bs, &vector);
+			break;
+		case(knight):
+			knightMovement(pos, 0, bs, &vector);
+			break;
+		case(bishop):
+			bishopMovement(pos, 0, bs, &vector);
+			break;
+		case(queen):
+			queenMovement(pos, 0, bs, &vector);
+			break;
+		case(king):
+			kingMovement(pos, 0, bs, &vector);
+			break;
+		default:
+			vector = 0;
+			break;
+	}
+	return vector;
+}
+
+U8
+iterateVector(Boardstate bs, Board fromvector, Board tovector, Coord *co, U8 pass) // iterates through a vector of pieces trying to match their movement to another vector, returns the number of matches found
+{
+	Coord pos, extra = 0;
+       	int count = 0, pos2 = 0;
+	Board coverage;
+	if (co == NULL) co = &extra;
+
+	for (; fromvector; fromvector&=(fromvector-1)) { // iterate through all the possible pieces trying to move them and see how many can move
+		pos = btoc(fromvector);
+		coverage = calculateMovementVector(bs, pos)&(1ULL<<tovector); // only try to go where it can
+		for (coverage = tovector; coverage; coverage&=(coverage-1)) {
+			pos2 = btoc(coverage);
+			if(fauxMove(pos, pos2, bs, NULL)) {
+				*co = pos;
+				if (pass&1) return 1;
+				if (pass&2 && count==1) return 2;
+				count++;
+			}
+		}
+	}
+	return count;
 }
 
 #ifdef DEBUG //compile with debug to see boards as just bits
@@ -423,26 +422,35 @@ void prettyPrintBoard(Boardstate bs)
 void
 printBoard(Boardstate bs)
 {
+	char c;
 	if (bs.blackplaying) { // print the board upside-down
 		for (int i = 0; i < 64; i++) {
 			if (!(i%8))  { 
 				putchar('\n');
 				putchar('1'+(i/8));
 				putchar(' ');
+				putchar(' ');
 			}
-			putchar(findPiece(i, NULL, NULL, bs.bitboard));
+			c = findPiece(i, NULL, NULL, bs.bitboard);
+			if (c=='.' && (i+(i/8))&1) c = ',';
+			putchar(c);
+			putchar(' ');
 		}
-		puts("\n\n% HGFEDCBA\n");
-	} else {
+		puts("\n\n%  H G F E D C B A\n");
+	} else { // print the board the right way around
 		for (int i = 0; i < 64; i++) {
 			if (!(i%8))  { 
 				putchar('\n');
 				putchar('8'-(i/8));
 				putchar(' ');
+				putchar(' ');
 			}
-			putchar(findPiece(63-i, NULL, NULL, bs.bitboard));
+			c = findPiece(63-i, NULL, NULL, bs.bitboard);
+			if (c=='.' && (i+(i/8))&1) c = ',';
+			putchar(c);
+			putchar(' ');
 		}
-		puts("\n\n% ABCDEFGH\n");
+		puts("\n\n%  A B C D E F G H\n");
 	}
 	puts("\n");
 }
@@ -618,27 +626,166 @@ parseFEN(char *FEN, Boardstate bs)
 	return bs;
 }
 
-bool
-parseInput(Coord *coord1, Coord *coord2) 
+void
+printHighlightBoard(Boardstate bs, Board highlights)
 {
-	char l1, l2;
-	int n1, n2;
-	scanf("%c%d%c%d", &l1, &n1, &l2, &n2);
+	const U8 boardsize = 64; 
+	char out[64]; // array for printing
+	Coord coord;
+	char c;
+	coord = btoc(highlights);
+	for (int i = 0; i < boardsize; i++) { // store in character array
+		c = findPiece(i, NULL, NULL, bs.bitboard);
+		if (c=='.' && i == coord) {
+			highlights &= highlights-1;
+			coord = btoc(highlights);
+			c = 'x';
+		}
+		if (c=='.' && (i+(i/8))&1) c = ',';
+		out[i] = c;
+	}
 
-	if (l1>='a' && l1<='h') l1-=32;
-	if (l2>='a' && l2<='h') l2-=32;
+	char *row = "\n\n%  A B C D E F G H\n"; // needs to print out differently depending on orientation
 
-	if (l1<'A' || l1>'H') return false;
-	if (l2<'A' || l2>'H') return false;
+	if (bs.blackplaying) {
+		row = "\n\n%  H G F E D C B A\n";
+	}
 
-	if (n1<1 || n1>8) return false;
-	if (n2<1 || n2>8) return false;
-
-	*coord1 = 7 - l1 + 'A' + (n1-1)*8;
-	*coord2 = 7 - l2 + 'A' + (n2-1)*8;
-	
-	return true;
+	for (int i = 0; i < 64; i++) { // print out formatted
+		if (!(i%8)) {
+			putchar('\n');
+			putchar(bs.blackplaying?'1'+(i/8):'8'-(i/8));
+			putchar(' ');
+			putchar(' ');
+		}
+		putchar(bs.blackplaying?out[i]:out[63-i]); // prints out forwards or backwards
+		putchar(' ');
+	}
+	puts(row);
 }
+
+U8 // return number of chars read in
+readInput(char *s, U8 strsize) 
+{
+	char c;
+	fgets(s, strsize, stdin);
+	if (s[strlen(s)-1]=='\n') { // if the string is shorter than max size
+		s[strlen(s)-1]=0; // fix string length
+	} else while((c=fgetc(stdin)) != EOF && c != '\n'); // cleaning stdin
+	return strlen(s);
+}
+
+// parse from algebraic format
+// e4/e5/Ne4/Be4 etc.
+
+#define ATOC(A, B) ('a'-A+7+((B)-'0'-1)*8) // array to coordinate
+#define INBOUNDS(A, B) ( ( (A>='a' && A<='z')|(A>='A' && A<='Z') ) && (B>='1' && B<='9') )
+bool
+parseInput(char *s, Coord *from, Coord *to) // used with stdin input
+{
+	U8 len = strlen(s);
+	U8 file;
+	U64 p = 1ULL;
+	Coord temp;
+	Board b, t;
+
+	strrm(s, 'x'); // remove extra symbols
+	strrm(s, '+');
+	strrm(s, '#');
+
+	if (strcmp(s, "O-O")==0) {
+		// check which player is trying to castle
+		// fauxmove
+		if (currBoard.blackplaying) {
+			*from = 59;
+			*to = 57;
+		} else {
+			*from = 3;
+			*to = 1;
+		}
+		return fauxMove(*from, *to, currBoard, NULL);
+	} else if (strcmp(s, "O-O-O")==0) {
+		// check which player is trying to castle
+		// fauxmove
+		if (currBoard.blackplaying) {
+			*from = 59;
+			*to = 61;
+		} else {
+			*from = 3;
+			*to = 5;
+		}
+		return fauxMove(*from, *to, currBoard, NULL);
+	}
+
+	if (!INBOUNDS(s[len-2], s[len-1]) & (len>1)) return 0;
+	switch(len) {
+		case(0): // bad input, get input again
+			return 0;
+		case(1): // quit
+			if ((*s=='q')|(*s=='Q')) return 2;
+			return 0;
+		case(2):// pawn movement
+			// get playerboard and isolate pawns
+			// highlighting
+			// fauxmove from to
+			if (s[0]<'a') { // highlighting
+				temp = ATOC(s[0]-32, s[1]);
+				if (!(currBoard.bitboard[total]&1ULL<<temp)) break; // make sure there's a piece there to print
+				printHighlightBoard(currBoard, calculateMovementVector(currBoard, temp));
+				break;
+			}
+
+			b = getPlayerBoard(currBoard.bitboard, currBoard.blackplaying)&currBoard.bitboard[pawn]; // only get the pawns
+			*to = ATOC(s[0], s[1]); // convert format to coordinate
+			// find from
+			return (iterateVector(currBoard, b, p<<*to, from, 2)==1); // if only one piece can move its valid
+		case(3): // move piece/pawn Ne4/de4
+			 // figure out if the first char is lower or capital
+			 // attempt pawn movement/piece movement
+			
+			*to = ATOC(s[1], s[2]);	
+		       	if (*s<'a') { // if its giving a letter e.g. Nf3
+				b = getPlayerBoard(currBoard.bitboard, currBoard.blackplaying)&currBoard.bitboard[ltoe[(U8) *s]];
+				return (iterateVector(currBoard, b, p<<*to, from, 2)==1); // only want this to work if one piece can move there
+			}
+			file = 'a' - s[0] + 7; // find file 
+			t = p<<file;
+			for (int i = 0; i < 8; i++) {
+				t<<=8;
+				t |= p<<file;
+			} // make a board of just that file
+			b = getPlayerBoard(currBoard.bitboard, currBoard.blackplaying)&currBoard.bitboard[pawn]&t;
+			return (iterateVector(currBoard, b, p<<*to, from, 2)==1); // only should work if one piece can move there 
+		case(4): // move piece Nce4 / standard positional notation
+			*to = ATOC(s[2], s[3]);
+			if (INBOUNDS(s[0], s[1]) && (s[0]<'a')) { // make sure notation is correct
+				// standard positional notation	
+				*from = ATOC(s[0]-32, s[1]);
+				return true;
+			}
+			if (!(INBOUNDS(s[0], '1')&&(s[0]<'a')&&INBOUNDS(s[1], '1')&&(s[1]>='a'))) break; // check syntax
+			file = 'a' - s[1] + 7; // find file 
+			t = p<<file;
+			for (int i = 0; i < 8; i++) {
+				t<<=8;
+				t |= p<<file;
+			} // make a board of just that file
+			b = getPlayerBoard(currBoard.bitboard, currBoard.blackplaying)&currBoard.bitboard[ltoe[(U8) *s]]&t; // get a board of just those pieces on just that file
+			return (iterateVector(currBoard, b, p<<*to, from, 2)==1); // only should work if one piece can move there 
+		case(5): // move piece Nc3e4
+			 // make sure that the piece at the from pos matches the char
+			 // standard positional notation move
+			*to = ATOC(s[3], s[4]);
+			if (!(INBOUNDS(s[1], s[2])&&(s[1]>='a'))) break;
+			*from = ATOC(s[1], s[2]);
+			findPiece(*from, &temp, NULL, currBoard.bitboard);
+			if (temp==ltoe[(U8) s[0]]) return fauxMove(*from, *to, currBoard, NULL);
+			break;
+	}
+	return false;
+}
+#undef ATOC
+#undef INBOUNDS
 
 bool 
 movePiece(Coord from, Coord to) // works exclusively with the current board
@@ -649,15 +796,21 @@ movePiece(Coord from, Coord to) // works exclusively with the current board
 		return false;
 	}
 
+	cpyBoardstate(&prevBoard, currBoard);
+
 	cpyBoardstate(&currBoard, newbs);
 
 	free(newbs.bitboard);
+
+	appendMovePGN(prevBoard, currBoard, &po, from, to);
+	flushPGN(currBoard, po);
+
 	return true;
 }
 
 #define FAUXMOVERET(A, B) {free(A.bitboard); return B;}
 bool
-fauxMove(Coord from, Coord to, Boardstate bs, Boardstate *nbs)
+fauxMove(Coord from, Coord to, Boardstate bs, Boardstate *nbs) // write a companion that's more efficient as this is used EVERYWHERE and has a little extra overhead than needed in some cases
 {
 	Boardstate extra = makeBoardstate(NULL, 0, 0); // new boardstate
 	if (nbs==NULL) nbs = &extra;
@@ -668,9 +821,6 @@ fauxMove(Coord from, Coord to, Boardstate bs, Boardstate *nbs)
 	findPiece(from, &frompiece, &fromcolourblack, nbs->bitboard);
 	findPiece(to, &topiece, &tocolourblack, nbs->bitboard);
 
-	Board moves;
-
-	
 	if (bs.blackplaying-fromcolourblack || frompiece==nopiece || !(fromcolourblack^tocolourblack)&(topiece!=nopiece)) {
 		//printf("\nCan't move a piece that doesn't exist or take your own piece");
        	       FAUXMOVERET(extra, false); // Can't move a piece that doesn't exist or take your own piece
@@ -685,7 +835,7 @@ fauxMove(Coord from, Coord to, Boardstate bs, Boardstate *nbs)
 	switch(frompiece) {
 		case(pawn):
 			if (fromcolourblack) {
-				test = blackPawnMovement(from, to, *nbs, &moves);
+				test = blackPawnMovement(from, to, *nbs, NULL);
 				if (test == 2) { //en passant logic
 					findPiece(to+8, &passantpiece, &passantcolourblack, nbs->bitboard);
 					nbs->bitboard[total]^=p<<(to+8);
@@ -698,7 +848,7 @@ fauxMove(Coord from, Coord to, Boardstate bs, Boardstate *nbs)
 					nbs->movementflags&=0xF0;
 				}
 			} else {
-				test = whitePawnMovement(from, to, *nbs, &moves);
+				test = whitePawnMovement(from, to, *nbs, NULL);
 				if (test == 2) { // en passant
 					findPiece(to-8, &passantpiece, &passantcolourblack, nbs->bitboard);	
 					nbs->bitboard[black]^=p<<(to-8);
@@ -715,16 +865,16 @@ fauxMove(Coord from, Coord to, Boardstate bs, Boardstate *nbs)
 			// pawn has reached the end of the board 
 			// //update this to be ai friendly
 			if (test && (0==to>>3 || 7==to>>3)) {
-				puts("Enter which piece you want (R=1, K=2, B=3, Q=4): ");
-				U8 pieceno;
+				puts("Enter which piece you want (R=1, N=2, B=3, Q=4): ");
+				char pieceno[2];
 PROMOTION:
-				scanf("%c", &pieceno);
-				switch(pieceno) {
+				readInput(pieceno, 2);
+				switch(*pieceno-'0') {
 					case(rook):
 					case(knight):
 					case(bishop):
 					case(queen):
-						frompiece=pieceno;	
+						frompiece=*pieceno;
 						break;
 					default:
 						goto PROMOTION;
@@ -841,8 +991,9 @@ PROMOTION:
 	//puts("c");
 	FAUXMOVERET(extra, true);
 }
+#undef FAUXMOVERET
 
-inline Coord btoc(Board b)
+inline Coord btoc(Board b) // board to coordinate
 {
 	if (!b) return 0;
 	Coord pos = 0;
@@ -863,11 +1014,6 @@ inline bool inCheck(Boardstate bs) // invert this moveblack
 	return !!(bs.bitboard[king]&getPlayerBoard(bs.bitboard, bs.blackplaying)&calculateAttackVectors(bs.bitboard, !bs.blackplaying));
 }
 
-////
-//Rewrite to use a bespoke function instead of fauxmove optimised for speed in this case?
-////
-
-
 // checks if the king is in mate
 //  -> checks if the king can move to any of its 8 possible moves
 //   -> gets every piece of your colour and every potential square the king can be attacked on and keeps trying to move pieces until its out of mate.
@@ -884,54 +1030,13 @@ inCheckMate(Boardstate bs)
 	
 	Board pieces = getPlayerBoard(bs.bitboard, bs.blackplaying); // Board containing just the king in question
 
-	Board kingb = bs.bitboard[king]&pieces;
+	Coord kingc = btoc(bs.bitboard[king]&pieces); // position of the king
 	
-	Coord kingc = btoc(kingb); // position of the king
+	//check if any other piece can move to break mate
 	
-	Board vectors = queenAttackVectors(kingc, bs.bitboard) | knightAttackVectors(kingc); // every position that can be attacking the king
+	Board vectors = queenAttackVectors(kingc, bs.bitboard) | knightAttackVectors(kingc); // every position that can be attacking the king & the king can move to
 
-	Board tempcoverage, coverage;
-
-	Coord from, to;
-
-	U8 piece = nopiece;
-
-	for (; pieces; pieces&=(pieces-1)) { // iterate through all the possible pieces trying to block
-		from = btoc(pieces);
-		findPiece(from, &piece, NULL, bs.bitboard);
-		switch(piece) {
-			case(pawn):
-				if (bs.blackplaying) {
-					blackPawnMovement(from, 0, bs, &coverage);
-				} else	whitePawnMovement(from, 0, bs, &coverage);
-				break;
-			case(rook):
-				rookMovement(from, 0, bs, &coverage);
-				break;
-			case(knight):
-				knightMovement(from, 0, bs, &coverage);
-				break;
-			case(bishop):
-				bishopMovement(from, 0, bs, &coverage);
-				break;
-			case(queen):
-				queenMovement(from, 0, bs, &coverage);
-				break;
-			case(king):
-				kingMovement(from, 0, bs, &coverage);
-				break;
-			default:
-				coverage = 0;
-				break;
-		}
-		coverage &= vectors; // only tries to move where pieces can move
-		for (tempcoverage = coverage; tempcoverage; tempcoverage&=(tempcoverage-1)) {
-			to = btoc(tempcoverage);
-			if(fauxMove(from, to, bs, NULL)) return false; // if it can stop the mate
-		}
-	}
-
-	return true; // couldn't find a potential move
+	return iterateVector(bs, pieces, vectors, NULL, 1) == 0; // try to move all of your pieces to ANY square
 }
 
 // 1) Not in check
@@ -942,50 +1047,6 @@ bool
 inStaleMate(Boardstate bs)
 {
 	if (inCheck(bs)) return false; // can't be in check and in stalemate
-	
 	Board pieces = getPlayerBoard(bs.bitboard, bs.blackplaying); //returns a board of all the players pieces
-
-	Board tempcoverage, coverage;
-
-	Coord from, to;
-
-	U8 piece = nopiece;
-
-	for (; pieces; pieces&=(pieces-1)) { // iterate through all the possible pieces trying to move
-		from = btoc(pieces);
-		// findPiece, switch according to piece and generate coverage board from that
-		// maybe split this into its own function
-		findPiece(from, &piece, NULL, bs.bitboard);
-		switch(piece) {
-			case(pawn):
-				if (bs.blackplaying) {
-					blackPawnMovement(from, 0, bs, &coverage);
-				} else	whitePawnMovement(from, 0, bs, &coverage);
-				break;
-			case(rook):
-				rookMovement(from, 0, bs, &coverage);
-				break;
-			case(knight):
-				knightMovement(from, 0, bs, &coverage);
-				break;
-			case(bishop):
-				bishopMovement(from, 0, bs, &coverage);
-				break;
-			case(queen):
-				queenMovement(from, 0, bs, &coverage);
-				break;
-			case(king):
-				kingMovement(from, 0, bs, &coverage);
-				break;
-			default:
-				coverage = 0;
-				break;
-		}
-		for (tempcoverage = coverage; tempcoverage; tempcoverage&=(tempcoverage-1)) {
-			to = btoc(tempcoverage);
-			if(fauxMove(from, to, bs, NULL)) return false;
-		}
-	}
-
-	return true; // couldn't find a potential move
+	return iterateVector(bs, pieces, -1, NULL, 1) == 0; // try to move all of your pieces to ANY square
 }

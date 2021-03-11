@@ -1,11 +1,14 @@
-OBJS		= main.o moves.o eval.o ai.o
-CFLAGS		= -g -Wall
+OBJS		= gamemodes.o moves.o pgn.o main.o
+CFLAGS		= -g -Wall -D DEBUG
 
 
 chess :		$(OBJS)
 	$(CC) -o chess $(OBJS)
+gamemodes.o:	gamemodes.h main.h pgn.h types.h	
 
-moves.o :	moves.h types.h
+moves.o :	moves.h main.h types.h
+
+pgn.o :		pgn.h main.h types.h
 
 eval.o :	eval.h main.h types.h
 
