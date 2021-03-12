@@ -348,10 +348,10 @@ void printFEN(Boardstate bs, Coord from, Coord to)
 	
 	// Castling flags
 	putchar(' ');
-	if(bs.movementflags&0x80) printf("K");
-	if(bs.movementflags&0x40) printf("Q");
-	if(bs.movementflags&0x20) printf("k");
-	if(bs.movementflags&0x10) printf("q");
+	if(bs.movementflags&0x80) putchar('K');
+	if(bs.movementflags&0x40) putchar('Q');
+	if(bs.movementflags&0x20) putchar('k');
+	if(bs.movementflags&0x10) putchar('q');
 	
 	// En passant target square
 	if(bs.blackplaying && ((from+16) == to) && (findPiece(to, NULL, NULL, bs.bitboard) == 'P'))

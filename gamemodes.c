@@ -57,14 +57,14 @@ localAI(Boardstate *currBoard)
 LOOP: // works ok to me		
 		if(!currBoard->blackplaying) // then white must be playing
 		{
-			printf("\a"); // notify that they are to input
+			puts("\a"); // notify that they are to input
 			readInput(s, strsize);
 			result = parseInput(s, &from, &to);
 			if (result==2) break; // quit
 			promotion = getPromotion;
 		}
 		else{ // otherwise let the bot play
-			result = calculateBestMove(*currBoard, currBoard->blackplaying, 3, &from, &to);			
+			result = calculateBestMove(*currBoard, currBoard->blackplaying, 4, &from, &to);			
 			promotion = piecePromotionAI;
 		}
 

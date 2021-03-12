@@ -130,7 +130,7 @@ possibleMoveTo(Boardstate bs, bool isBlack, U8 *from, int size)
 				vectors |= queenAttackVectors(i, bs.bitboard)^(queenAttackVectors(i, bs.bitboard)&self);
 			}
 			else{
-				printf("\n\t UNKNOWN PIECE");
+				puts("\t UNKNOWN PIECE");
 			}
 		}
 	}
@@ -185,7 +185,7 @@ moveablePieces(Boardstate bs, bool isBlack)
 				piece = 'Q';
 			}
 			else{
-				printf("\n\t UNKNOWN PIECE");
+				puts("\t UNKNOWN PIECE");
 			}
 			// after establishing what type of piece it is, check if it was a black or white piece
 			if((b&1ULL<<i)&(bs.bitboard[black])) //
@@ -242,7 +242,8 @@ NegaMax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 				newbs.blackplaying = !newbs.blackplaying; 
 				// the best move is the higher value of either the current best move
 				// or the negation of the next depth search
-				bestMove = MAX(bestMove, -NegaMax(depth-1, newbs, !isBlack, -beta, -alpha));
+				float temp = -NegaMax(depth-1, newbs, !isBlack, -beta, -alpha);
+				bestMove = MAX(bestMove, temp);
 				// alpha is the higher value of either the current alpha or the best move
 				alpha = MAX(alpha, bestMove);
 				// if alpha is greater than or equal to beta, then we can stop searching this branch.
@@ -292,9 +293,10 @@ calculateBestMove(Boardstate bs, bool isBlack, int depth, Coord *coord1, Coord *
 				// flip the player to move
 				newbs.blackplaying = !newbs.blackplaying;
 				// get the advantage of this position via inital Negamax with extreme alpha and beta
-				float newAdvantage = -NegaMax(depth-1, newbs, !isBlack, -10000, 10000);
+				float newAdvantage = -NegaMax(depth, newbs, !isBlack, -10000, 10000);
 				// if the new advantage is greater than the old advantage. Remember the coords for this move
-				if(newAdvantage > bestScore)
+
+				if(newAdvantage >= bestScore)
 				{
 					bestScore = newAdvantage;
 					best1 = one;

@@ -14,14 +14,14 @@ int pawnPosition[64] = {
 };
 // Knight positional advantage table
 int knightPosition[64] = {
-	-50,-40,-30,-30,-30,-30,-40,-50,
+	-50,100,-30,-30,-30,-30,100,-50,
 	-40,-20,  0,  0,  0,  0,-20,-40,
 	-30,  0, 10, 15, 15, 10,  0,-30,
 	-30,  5, 15, 20, 20, 15,  5,-30,
 	-30,  0, 15, 20, 20, 15,  0,-30,
 	-30,  5, 10, 15, 15, 10,  5,-30,
 	-40,-20,  0,  5,  5,  0,-20,-40,
-	-50,-40,-30,-30,-30,-30,-40,-50
+	-50,-1000,-30,-30,-30,-30,100,-50
 };
 // Bishop positional advantage table
 int bishopPosition[64] = {
@@ -79,6 +79,7 @@ int kingEndPosition[64] = {
 	-50,-30,-30,-30,-30,-30,-30,-50
 };
 
+
 int 
 numberOfBits(Board b)
 {
@@ -113,7 +114,7 @@ calculatePositionAdvantage(Boardstate state)
 	// count the number of pieces of type and change the positional value of that pieces
 
 	int whitePawnPos =  0;
-	for(int i = 8; i < 64; i++)
+	for(int i = 0; i < 64; i++)
 	{
 		if((wP>>i)&1) whitePawnPos+=(pawnPosition[63-i]);
 	}
@@ -149,7 +150,7 @@ calculatePositionAdvantage(Boardstate state)
 			whiteKingPos+=(kingMidPosition[63-i]);
 	}
 	int blackPawnPos =  0;
-	for(int i = 0; i < 56; i++)
+	for(int i = 0; i < 64; i++)
 	{
 		if((bP>>i)&1)
 			blackPawnPos+=(pawnPosition[i]);
@@ -236,19 +237,19 @@ calculateMaterialAdvantage(Boardstate state)
 
 	    // Calculate Black and White material value using the count of pieces that they have
 	    // multiplied by general piece value
-	int whiteMaterial = whitePawns + (whiteKnights * 3) + (whiteBishops * 3) + (whiteRooks * 5) + (whiteQueens * 9) + (whiteKings * 100);
-	int blackMaterial = blackPawns + (blackKnights * 3) + (blackBishops * 3) + (blackRooks * 5) + (blackQueens * 9) + (blackKings * 100);
+	int whiteMaterial = whitePawns + (whiteKnights * 3) + (whiteBishops * 3) + (whiteRooks * 5) + (whiteQueens * 9) + (whiteKings * 300);
+	int blackMaterial = blackPawns + (blackKnights * 3) + (blackBishops * 3) + (blackRooks * 5) + (blackQueens * 9) + (blackKings * 300);
 
 	    // return the difference of material value
 	return whiteMaterial - blackMaterial;
 }
 
 float
-calculateAdvantage(Boardstate state)
+calculateAdvantage(Boardstate bs)
 {
 	// Get material and positional advantage
-	float score = calculateMaterialAdvantage(state);
-	int pos = calculatePositionAdvantage(state);
+	float score = calculateMaterialAdvantage(bs);
+	float pos = calculatePositionAdvantage(bs);
 	// return this score after some weighting adjustments.
 	return score+(pos*0.01);
 }
