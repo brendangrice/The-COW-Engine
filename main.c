@@ -575,14 +575,14 @@ parseFEN(char *FEN, Boardstate bs)
 					exit(1); // cheeky exit
 				}
 				
-				file_ID = HFILE*(1<<('H'-letter));
+				file_ID = 0x0101010101010101*(1<<('H'-letter));
 
 				if ((number<'1') || (number>'8')) {
 					puts("\nSomething Went Wrong"); 
 					exit(1); // cheeky exit
 				}
 				
-				rank_ID = (RANK1*1ULL)<<(8*(number-'1'));
+				rank_ID = (0x00000000000000FF*1ULL)<<(8*(number-'1'));
 
 				type = ltoe[(U8) piece];
 				if (type == nopiece) {
@@ -644,7 +644,18 @@ readInput(char *s, U8 strsize)
 // parse from algebraic format
 // e4/e5/Ne4/Be4 etc.
 
-#define ATOC(A, B) ('a'-A+7+((B)-'0'-1)*8) // array to coordinate
+inline Coord atoc(char l, char n) { // could use a better name
+	if (!((l>='a' && l<='z')|(l>='A' && l<='Z') ) && (n>='1' && n<='9')) return -1; // not in bounds
+	return 'a'-l+7+((n)-'0'-1)*8; // array to coordinate
+}
+
+inline char *ctoa(char *s, Coord c) {
+	if (c>63) return NULL;
+	s[0] = 'H'-c%8;
+	s[1] = c/8+'1';
+	return s;
+}
+
 #define INBOUNDS(A, B) ( ( (A>='a' && A<='z')|(A>='A' && A<='Z') ) && (B>='1' && B<='9') )
 bool
 parseInput(char *s, Coord *from, Coord *to) // used with stdin input
@@ -695,21 +706,21 @@ parseInput(char *s, Coord *from, Coord *to) // used with stdin input
 			// highlighting
 			// fauxmove from to
 			if (s[0]<'a') { // highlighting
-				temp = ATOC(s[0]-32, s[1]);
+				temp = atoc(s[0]-32, s[1]);
 				if (!(currBoard.bitboard[total]&1ULL<<temp)) break; // make sure there's a piece there to print
 				printHighlightBoard(currBoard, calculateMovementVector(currBoard, temp));
 				break;
 			}
 
 			b = getPlayerBoard(currBoard.bitboard, currBoard.blackplaying)&currBoard.bitboard[pawn]; // only get the pawns
-			*to = ATOC(s[0], s[1]); // convert format to coordinate
+			*to = atoc(s[0], s[1]); // convert format to coordinate
 			// find from
 			return (iterateVector(currBoard, b, p<<*to, from, 2)==1); // if only one piece can move its valid
 		case(3): // move piece/pawn Ne4/de4
 			 // figure out if the first char is lower or capital
 			 // attempt pawn movement/piece movement
 			
-			*to = ATOC(s[1], s[2]);	
+			*to = atoc(s[1], s[2]);	
 		       	if (*s<'a') { // if its giving a letter e.g. Nf3
 				b = getPlayerBoard(currBoard.bitboard, currBoard.blackplaying)&currBoard.bitboard[ltoe[(U8) *s]];
 				return (iterateVector(currBoard, b, p<<*to, from, 2)==1); // only want this to work if one piece can move there
@@ -723,10 +734,10 @@ parseInput(char *s, Coord *from, Coord *to) // used with stdin input
 			b = getPlayerBoard(currBoard.bitboard, currBoard.blackplaying)&currBoard.bitboard[pawn]&t;
 			return (iterateVector(currBoard, b, p<<*to, from, 2)==1); // only should work if one piece can move there 
 		case(4): // move piece Nce4 / standard positional notation
-			*to = ATOC(s[2], s[3]);
+			*to = atoc(s[2], s[3]);
 			if (INBOUNDS(s[0], s[1]) && (s[0]<'a')) { // make sure notation is correct
 				// standard positional notation	
-				*from = ATOC(s[0]-32, s[1]);
+				*from = atoc(s[0]-32, s[1]);
 				return true;
 			}
 			if (!(INBOUNDS(s[0], '1')&&(s[0]<'a')&&INBOUNDS(s[1], '1')&&(s[1]>='a'))) break; // check syntax
@@ -741,16 +752,15 @@ parseInput(char *s, Coord *from, Coord *to) // used with stdin input
 		case(5): // move piece Nc3e4
 			 // make sure that the piece at the from pos matches the char
 			 // standard positional notation move
-			*to = ATOC(s[3], s[4]);
+			*to = atoc(s[3], s[4]);
 			if (!(INBOUNDS(s[1], s[2])&&(s[1]>='a'))) break;
-			*from = ATOC(s[1], s[2]);
+			*from = atoc(s[1], s[2]);
 			findPiece(*from, &temp, NULL, currBoard.bitboard);
 			if (temp==ltoe[(U8) s[0]]) return fauxMove(*from, *to, currBoard, NULL, NULL);
 			break;
 	}
 	return false;
 }
-#undef ATOC
 #undef INBOUNDS
 
 U8

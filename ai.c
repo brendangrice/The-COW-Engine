@@ -304,7 +304,10 @@ calculateBestMove(Boardstate bs, bool isBlack, int depth, Coord *coord1, Coord *
 		}
 	}
 	// after search has terminated
-	printf("\n>Hmmmmm. . . \n>Im going to play (%d %d)\n", best1, best2);
+	char temp[3];
+	char temp2[3];
+	temp[2] = temp2[2] = 0; // 0 terminate
+	printf("\n>Hmmmmm. . . \n>Im going to play (%s %s)\n", ctoa(temp, best1), ctoa(temp2, best2));
 	// assign best found coords to the coord pointers
 	*coord1 = best1;
 	*coord2 = best2;

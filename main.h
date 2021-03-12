@@ -22,26 +22,6 @@
 // when they need to constantly be re-evaluated anyways?
 // mostly used for debugging
 
-// file and rank constants
-
-#define AFILE 0x8080808080808080
-#define BFILE 0x4040404040404040
-#define CFILE 0x2020202020202020
-#define DFILE 0x1010101010101010
-#define EFILE 0x0808080808080808
-#define FFILE 0x0404040404040404
-#define GFILE 0x0202020202020202
-#define HFILE 0x0101010101010101
-
-#define RANK8 0xFF00000000000000
-#define RANK7 0x00FF000000000000
-#define RANK6 0x0000FF0000000000
-#define RANK5 0x000000FF00000000
-#define RANK4 0x00000000FF000000
-#define RANK3 0x0000000000FF0000
-#define RANK2 0x000000000000FF00
-#define RANK1 0x00000000000000FF
-
 // FEN constants
 #define FENBOARDDEFAULT "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
@@ -93,6 +73,8 @@ bool movePiece(Coord from, Coord to, U8(*promote)()); // returns true if the pie
 bool fauxMove(Coord from, Coord to, Boardstate bs, Boardstate *nbs, U8(*promote)()); // returns a board nbs as if the move had been executed, if its an illegal move nbs is set as bs. Boolean represents whether it was successful or not
 char findPiece(Coord pos, U8 *piece, bool *colourblack, Board *bitboard); //returns a char representation of a piece for printing. A number as per the enum and a boolean on the colour of the piece. takes coordinate (0-63)
 Coord btoc(Board b); // Board to Coord, returns the smallest coord with a piece on it on that board
+Coord atoc(char l, char n); // Array to Coord, returns the Coord of the respective algebraic notation H 1 -> 0. Out of bounds returns 255
+char *ctoa(char *s, Coord c); // Coord to Array, returns an Algebraic representation of the Coord;
 Board getPlayerBoard(Board *bitboard, bool blackplaying); // returns the combined board for the player given
 bool inCheck(Boardstate bs); // returns a boolean for whether or not the player whose turn it is is in check
 bool inCheckMate(Boardstate bs); // returns a boolean for whether or not the player whose turn it is is mate'd
