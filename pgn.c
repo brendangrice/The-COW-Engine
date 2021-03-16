@@ -11,7 +11,6 @@
 // [Black ""]
 // [Result ""]
 
-
 PGNoutput
 makePGN(char *round, char *white, char *black, char *fp)
 {
@@ -141,50 +140,83 @@ READPGNBODY:
 	return true;
 }
 
+U8 promotionpiece = nopiece;
+
+U8
+promotionPGN()
+{
+	return promotionpiece;
+}
+
 bool
 parsePGN(PGNoutput po, Boardstate *bs, U8 flags)
 {
 	//parse pgn as input
 	char white[9], black[9];
 	Coord from, to;
-	char *pos = po.pgn;
-	U8 diff;
+	char *diff, *pos = po.pgn;
+	char c;
 
-	while (1) {
-		pos = strchr(pos, '.') + 2;
+	#define ERR(A,B) {if (A==0) {fprintf(stderr, "Bad input on move %d: %s", move, B); exit(1);}}
+	for (int move = 1;;move++) {
+		// separate inputs
+		pos = strchr(pos, '.');
+		if (pos==NULL) break;
+		pos+=2;
 		white[0] = 0;
 		black[0] = 0;
-		diff = strchr(pos, ' ')-pos;
-		if (diff==0) break; // end of input
-		strncat(white, pos, diff); // copy one input across
-		pos+=diff+1;
-		diff = strchr(pos, ' ')-pos;
-		if (diff==0) break; // end of input
-		strncat(black, pos, diff); // copy one input across
-		pos+=diff+1;
+		diff = strchr(pos, ' ');
+		if (diff==NULL) break; // end of input
+		strncat(white, pos, diff-pos); // copy one input across
+		pos=diff+1;
+		diff = strchr(pos, ' ');
+		if (diff==NULL) break; // end of input
+		strncat(black, pos, diff-pos); // copy one input across
+		pos=diff+1;
 		if (*white=='1' || *white=='0' || *white=='*') return true; // end of input
 
+		// promotion
+		diff = strchr(white, '=');
+		if (diff!=NULL) {
+			diff[0] = 0; // cut the string
+			promotionpiece = ltoe[(int) diff[1]]; // set the promotion piece
+		}
+
 		// white input
-		parseInput(white, &from, &to); //TODO error checking
-		movePiece(from, to, false);
-		if (flags&(PGN_ALL|PGN_STEP)) {
-			if (flags&PGN_HEADER) printHeader(po, stdout);
-			if (flags&PGN_PRINT) printBoard(*bs);
-			if (flags&PGN_STEP) getchar();
+		ERR(parseInput(white, &from, &to), white);
+		ERR(movePiece(from, to, false, promotionPGN), white);
+		if (flags&(ARGP_PGN_ALL|ARGP_PGN_STEP)) {
+			if (flags&ARGP_PGN_HEADER) printHeader(po, stdout);
+			if (flags&ARGP_PGN_PRINT) prettyPrintBoard(*bs);
+			if (flags&ARGP_FEN_PRINT) printFEN(*bs, 0, 0); // TODO FIX THIS UP
+
+
+			if (flags&ARGP_PGN_STEP) if ((c=getchar())=='q' || c==EOF) return true;
 		}
 		bs->blackplaying=!bs->blackplaying; // switch players
 		if (*black=='1' || *black=='0' || *black=='*') return true; // end of input
 
+		// promotion
+		diff = strchr(black, '=');
+		if (diff!=NULL) {
+			diff[0] = 0; // cut the string
+			promotionpiece = ltoe[(int) diff[1]]; // set the promotion piece
+		}
+
 		// black input
-		parseInput(black, &from, &to); //TODO error checking
-		movePiece(from, to, false);
-		if (flags&(PGN_ALL|PGN_STEP)) {
-			if (flags&PGN_HEADER) printHeader(po, stdout);
-			if (flags&PGN_PRINT) printBoard(*bs);
-			if (flags&PGN_STEP) getchar();
+		ERR(parseInput(black, &from, &to), black);
+		ERR(movePiece(from, to, false, promotionPGN), black);
+		if (flags&(ARGP_PGN_ALL|ARGP_PGN_STEP)) {
+			if (flags&ARGP_PGN_HEADER) printHeader(po, stdout);
+			if (flags&ARGP_PGN_PRINT) prettyPrintBoard(*bs);
+			if (flags&ARGP_FEN_PRINT) printFEN(*bs, 0, 0); // TODO FIX THIS UP
+
+
+			if (flags&ARGP_PGN_STEP) if ((c=getchar())=='q' || c==EOF) return true;
 		}
 		bs->blackplaying=!bs->blackplaying; // switch players
 	}
+	#undef ERR
 	return false;
 }
 

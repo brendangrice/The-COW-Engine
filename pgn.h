@@ -22,11 +22,6 @@ typedef struct {
 
 #define PGNSTRINGSIZE (4+(18*100)) // about 18 chars per turn at 100 turns with the result being printed at the end
 
-#define PGN_ALL 0x1 // go thorugh all boards
-#define PGN_STEP 0x2 // step through boards
-#define PGN_PRINT 0X4 // print boards that are gone through
-#define PGN_HEADER 0X8 // print the PGN header
-
 typedef struct {
 	PGNheader header;
 	char pgn[PGNSTRINGSIZE]; // body of the moves being made

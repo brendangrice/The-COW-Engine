@@ -15,19 +15,21 @@ argp_parse (const struct argp *__restrict __argp, int __argc, char **__restrict 
 	__argp_state.input = __input;
 	__argp_state.arg_num = 1; // only handling one at a time
 	__argp_state.root_argp = __argp;
+
 	for (int i = 1; i<__argc; i++) {
+		__argp_state.next = i;
 		if(__argv[i][0] == '-') { // some sort of argument
 			if(__argv[i][1] == '-') { // some sort of argument string
 				// iterate through and match with name
 				str = __argv[i]+2; // str after --
 				int match = 1;
-				for (int i=0; __argp->options[i].name != 0 || __argp->options[i].key != 0; i++) {
-					if (strcmp(str, __argp->options[i].name)==0) { // try to find a match
-						__argp->parser( __argp->options[i].key, __argv[i+1], &__argp_state );
+				for (int j=0; __argp->options[i].name != 0 || __argp->options[i].key != 0; j++) {
+					if (strcmp(str, __argp->options[j].name)==0) { // try to find a match
+						__argp->parser( __argp->options[j].key, __argv[j+1], &__argp_state );
 						match = 0;
 					}
 				}
-				if (match) argp_usage(&__argp_state, stderr);
+				if (match) argp_usage(&__argp_state, stderr); // if no match was found
 			} else { // else there's a flag
 				int pos = 1;
 				// while there are flags to parse
@@ -36,6 +38,7 @@ argp_parse (const struct argp *__restrict __argp, int __argc, char **__restrict 
 		} else { //loose
 			__argp->parser( ARGP_KEY_ARG, __argv[i], &__argp_state );
 		}
+		if (__argp_state.next>i) i = __argp_state.next;
 	}
 	return 0;
 }

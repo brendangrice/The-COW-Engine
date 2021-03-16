@@ -14,6 +14,13 @@ typedef int error_t;
 #define ARGP_KEY_ARG		0
 #define ARGP_HELP_USAGE		0x01
 
+
+#define ARGP_PGN_ALL 0x1 // go thorugh all boards
+#define ARGP_PGN_STEP 0x2 // step through boards
+#define ARGP_PGN_PRINT 0X4 // print boards that are gone through
+#define ARGP_PGN_HEADER 0X8 // print the PGN header
+#define ARGP_FEN_PRINT 0X10 // print FEN string
+
 struct argp;			/* fwd declare this type */
 struct argp_state;		/* " */
 struct argp_child;		/* " */
@@ -47,7 +54,7 @@ struct argp_state
   const struct argp *root_argp;
   int argc; 
   char **argv;
-  int next; //unused
+  int next;
   unsigned flags; //unused
   unsigned arg_num; //unused
   int quoted; //unused

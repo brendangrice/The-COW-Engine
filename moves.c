@@ -1,8 +1,9 @@
 #include "moves.h"
 
+bool (*movementVectors[]) (Coord from, Coord to, Boardstate bs, Board *vector) = {whitePawnMovement, blackPawnMovement, rookMovement, knightMovement, bishopMovement, queenMovement, kingMovement};
+Board (*attackVectors[]) (Coord pos, Board *bitboard) = {whitePawnAttackVectors, blackPawnAttackVectors, rookAttackVectors, knightAttackVectors, bishopAttackVectors, queenAttackVectors, kingAttackVectors};
+
 //TODO COMBINE PAWNMOVEMENT AND ATTACK, MAKING THEM WORK OFF ONE FUNCTION BASED ON COLOUR
-//TODO #DEFINE FLAGS FOR PAWN MOVEMENTS AND CASTLING
-//TODO PUT THESE FUNCTIONS IN ARRAYS FOR EASY LOOKUP
 
 U8
 whitePawnMovement(Coord from, Coord to, Boardstate bs, Board *vector)
@@ -11,15 +12,15 @@ whitePawnMovement(Coord from, Coord to, Boardstate bs, Board *vector)
 	if (vector==NULL) vector = &extra;
 	*vector = 0;
 	U64 p = 1ULL;
-	Board attack = whitePawnAttackVectors(from);
+	Board attack = whitePawnAttackVectors(from, NULL);
 	*vector |= attack&bs.bitboard[black]; // where the piece can attack
 	*vector |= (~bs.bitboard[total])&(p<<(from+8)); // if there isn't a piece in front it can move
 	if (bs.movementflags&8) *vector |= attack&((p<<40)<<(bs.movementflags&7)); // where the pawn can attack and en passant
 	if ((from>>3)==1 && !(bs.bitboard[total]&p<<(from+8))) *vector |= (~bs.bitboard[total])&(p<<(from+16)); //must be on the second file and no piece in front of it by one or two spaces, need to update flags too
 	// figure out what sort of move was made
-	if (to==40+(bs.movementflags&7) && *vector&p<<to) return 2; // en passant
-	if (to==from+16 && *vector&p<<to) return 3; // double move, update flags
-	if (*vector&p<<to) return 1; // regular movement
+	if (bs.movementflags&8 && to==40+(bs.movementflags&7) && *vector&p<<to) return MOVES_PAWN_EN_PASSANT; // en passant
+	if (to==from+16 && *vector&p<<to) return MOVES_PAWN_DOUBLE; // double move, update flags
+	if (*vector&p<<to) return MOVES_PAWN_NORMAL; // regular movement
 	return false; // can't move
 }
 
@@ -31,14 +32,14 @@ blackPawnMovement(Coord from, Coord to, Boardstate bs, Board *vector)
 	*vector = 0;
 	U64 p = 1ULL;
 
-	Board attack = blackPawnAttackVectors(from);
+	Board attack = blackPawnAttackVectors(from, NULL);
 	*vector |= attack&(bs.bitboard[total]^bs.bitboard[black]); //where the pawn can normally attack
 	*vector |= (~bs.bitboard[total])&(p<<(from-8)); // if there isn't a piece in front it can move
 	if (bs.movementflags&8) *vector |= attack&((p<<16)<<(bs.movementflags&7)); // where the pawn can attack and en passant
 	if ((from>>3)==6 && !(bs.bitboard[total]&(p<<(from-8)))) *vector |= (~bs.bitboard[total])&(p<<(from-16)); // must be on the second file and no piece one or two squares in front of it, need to update flags too
-	if (to==16+(bs.movementflags&7) && *vector&p<<to) return 2; // en passant
-	if (to==from-16 && *vector&p<<to) return 3; // double move, update flags
-	if (*vector&p<<to) return 1; // regular movement
+	if (bs.movementflags&8 && to==16+(bs.movementflags&7) && *vector&p<<to) return MOVES_PAWN_EN_PASSANT; // en passant
+	if (to==from-16 && *vector&p<<to) return MOVES_PAWN_DOUBLE; // double move, update flags
+	if (*vector&p<<to) return MOVES_PAWN_NORMAL; // regular movement
 	return false; // can't move
 }
 
@@ -57,7 +58,7 @@ knightMovement(Coord from, Coord to, Boardstate bs, Board *vector) //can move to
 {
 	Board extra;
 	if (vector==NULL) vector = &extra;
-	*vector = knightAttackVectors(from)&~getPlayerBoard(bs.bitboard, bs.blackplaying); //shouldn't be able to attack your own pieces
+	*vector = knightAttackVectors(from, NULL)&~getPlayerBoard(bs.bitboard, bs.blackplaying); //shouldn't be able to attack your own pieces
 	return (*vector&1ULL<<to)>>to;
 }
 
@@ -85,7 +86,7 @@ kingMovement(Coord from, Coord to, Boardstate bs, Board *vector) //can move to w
 	Board extra;
 	if (vector==NULL) vector = &extra;
 	
-	*vector = kingAttackVectors(from)&~getPlayerBoard(bs.bitboard, bs.blackplaying); // can't attack your own pieces
+	*vector = kingAttackVectors(from, NULL)&~getPlayerBoard(bs.bitboard, bs.blackplaying); // can't attack your own pieces
 	U64 p = 1ULL;
 
 	//castling
@@ -103,25 +104,25 @@ kingMovement(Coord from, Coord to, Boardstate bs, Board *vector) //can move to w
 		// Check squares are empty and not threatened
 		if (!(bs.bitboard[total]&0x70)&&!(blackattack&0x38)) {
 		       	*vector |= p<<5;
-			if (to==0x05) result = 2;
+			if (to==0x05) result = MOVES_KING_WHITE_QUEEN;
 		}
 	if ((from>>3)==0 && bs.movementflags&0x40) // White right
 		// Check squares are empty and not threatened
 		if (!(bs.bitboard[total]&0x06)&&!(blackattack&0x0E)) {
 			*vector |= p<<1;
-			if (to==0x01) result = 3;
+			if (to==0x01) result = MOVES_KING_WHITE_KING;
 		}
-	if ((from>>3)==7 && bs.movementflags&0x20) // Black left
+	if ((from>>3)==7 && bs.movementflags&0x20) // Black right
 		// Check squares are empty and not threatened
 		if (!(bs.bitboard[total]&l1)&&!(whiteattack&l2)) {
 			*vector |= p<<0x3D;	
-			if (to==0x3D) result = 4;
+			if (to==0x3D) result = MOVES_KING_BLACK_QUEEN;
 		}
-	if ((from>>3)==7 && bs.movementflags&0x10) // Black right
+	if ((from>>3)==7 && bs.movementflags&0x10) // Black left
 		// Check squares are empty and not threatened
 		if (!(bs.bitboard[total]&l3)&&!(whiteattack&l4)) {
 			*vector |= p<<0x39;
-			if (to==0x39) result = 5;
+			if (to==0x39) result = MOVES_KING_BLACK_KING;
 		}
 
 	if (result) return result;
@@ -129,7 +130,7 @@ kingMovement(Coord from, Coord to, Boardstate bs, Board *vector) //can move to w
 }
 
 Board 
-whitePawnAttackVectors(Coord pos) // pawns can attack diagonally
+whitePawnAttackVectors(Coord pos, Board *bitboard) // pawns can attack diagonally
 {
 	U64 vector = 0;
 	U64 p = 1ULL;
@@ -140,7 +141,7 @@ whitePawnAttackVectors(Coord pos) // pawns can attack diagonally
 }
 
 Board 
-blackPawnAttackVectors(Coord pos) // pawns can attack diagonally
+blackPawnAttackVectors(Coord pos, Board *bitboard) // pawns can attack diagonally
 {
 	U64 vector = 0;
 	U64 p = 1ULL;
@@ -178,7 +179,7 @@ rookAttackVectors(Coord pos, Board *bitboard) // makes 4 boards and puts them to
 }
 
 Board 
-knightAttackVectors(Coord pos)
+knightAttackVectors(Coord pos, Board *bitboard)
 {
 	Board vector = 0;
 	U64 p = 1ULL;
@@ -231,7 +232,7 @@ queenAttackVectors(Coord pos, Board *bitboard)
 }
 
 Board 
-kingAttackVectors(Coord pos)
+kingAttackVectors(Coord pos, Board *bitboard)
 {
 	U64 vector = 0;
 	U64 p = 1ULL;
@@ -254,3 +255,4 @@ kingAttackVectors(Coord pos)
 
 	return vector;
 }
+

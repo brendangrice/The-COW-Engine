@@ -16,6 +16,10 @@
 // pawn can move one, can move two, can promote, can take maybe rename these from 'movement'
 // canWhitePawnMove?
 // returns 2 for en passant, 3 for double move, returns 1 for a regular valid move
+#define MOVES_PAWN_NORMAL 1
+#define MOVES_PAWN_EN_PASSANT 2
+#define MOVES_PAWN_DOUBLE 3
+
 U8 whitePawnMovement(Coord from, Coord to, Boardstate bs, Board *vector);
 U8 blackPawnMovement(Coord from, Coord to, Boardstate bs, Board *vector);
 
@@ -30,17 +34,22 @@ bool queenMovement(Coord from, Coord to, Boardstate bs, Board *vector);
 
 // king also can castle for more movement
 
+#define MOVES_KING_WHITE_QUEEN 2
+#define MOVES_KING_WHITE_KING 3
+#define MOVES_KING_BLACK_QUEEN 4
+#define MOVES_KING_BLACK_KING 5
+
 U8 kingMovement(Coord from, Coord to, Boardstate bs, Board *vector);
 
 // all the different positions a piece can attack
 
 // 101
 // 0P0
-Board whitePawnAttackVectors(Coord pos);
+Board whitePawnAttackVectors(Coord pos, Board *bitboard);
 
 // 0p0
 // 101
-Board blackPawnAttackVectors(Coord pos);
+Board blackPawnAttackVectors(Coord pos, Board *bitboard);
 
 // Ordinal Directions
 //      ^
@@ -60,7 +69,7 @@ Board rookAttackVectors(Coord pos, Board *bitboard);
 // 00N00
 // 10001
 // 01010
-Board knightAttackVectors(Coord pos);
+Board knightAttackVectors(Coord pos, Board *bitboard);
 
 /* 
 // Diagonals
@@ -97,6 +106,9 @@ Board queenAttackVectors(Coord pos, Board *bitboard);
 // 01110
 // 00000
 
-Board kingAttackVectors(Coord pos);
+Board kingAttackVectors(Coord pos, Board *bitboard);
+
+extern bool (*movementVectors[]) (Coord from, Coord to, Boardstate bs, Board *vector);
+extern Board (*attackVectors[]) (Coord pos, Board *bitboard);
 
 #endif
