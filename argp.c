@@ -23,7 +23,7 @@ argp_parse (const struct argp *__restrict __argp, int __argc, char **__restrict 
 				// iterate through and match with name
 				str = __argv[i]+2; // str after --
 				int match = 1;
-				for (int j=0; __argp->options[i].name != 0 || __argp->options[i].key != 0; j++) {
+				for (int j=0; __argp->options[j].name != NULL || __argp->options[j].key != 0; j++) {
 					if (strcmp(str, __argp->options[j].name)==0) { // try to find a match
 						__argp->parser( __argp->options[j].key, __argv[j+1], &__argp_state );
 						match = 0;
@@ -54,7 +54,7 @@ argp_usage (const struct argp_state *__restrict __state, FILE *s)
 	for (int i=0; __argp->options[i].key != 0; i++) if (__argp->options[i].key>' ' && !__argp->options[i].arg) fputc(__argp->options[i].key, s); // list all the flags
 	fputs("] ", s);
 	for (int i=0; __argp->options[i].key != 0; i++) if (__argp->options[i].key>' ' && __argp->options[i].arg) fprintf(s, "[-%c %s] ", (char) __argp->options[i].key, __argp->options[i].arg); // list all the flags
-	for (int i=0; __argp->options[i].name != 0; i++) {
+	for (int i=0; __argp->options[i].name != NULL; i++) {
 		if (__argp->options[i].arg) {
 			fprintf(s, "[--%s=%s] ", __argp->options[i].name, __argp->options[i].arg);
 		} else	fprintf(s, "[--%s] ", __argp->options[i].name); // list all the flags
@@ -107,7 +107,7 @@ argp_help (const struct argp_state *__restrict __state, FILE *s)
 
 	fputs(doc, s);
 	fputc('\n',s);
-	for (int i=0; __argp->options[i].name != 0 || __argp->options[i].key != 0; i++) {
+	for (int i=0; __argp->options[i].name != NULL || __argp->options[i].key != 0; i++) {
 		key[0] = '-';
 		key[1] = __argp->options[i].key;
 		if (key[1]<=' ') key[0] = 0; // proper spacing

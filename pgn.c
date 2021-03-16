@@ -169,10 +169,6 @@ parsePGN(PGNoutput po, Boardstate *bs, U8 flags)
 		if (diff==NULL) break; // end of input
 		strncat(white, pos, diff-pos); // copy one input across
 		pos=diff+1;
-		diff = strchr(pos, ' ');
-		if (diff==NULL) break; // end of input
-		strncat(black, pos, diff-pos); // copy one input across
-		pos=diff+1;
 		if (*white=='1' || *white=='0' || *white=='*') return true; // end of input
 
 		// promotion
@@ -194,6 +190,10 @@ parsePGN(PGNoutput po, Boardstate *bs, U8 flags)
 			if (flags&ARGP_PGN_STEP) if ((c=getchar())=='q' || c==EOF) return true;
 		}
 		bs->blackplaying=!bs->blackplaying; // switch players
+		diff = strchr(pos, ' ');
+		if (diff==NULL) break; // end of input
+		strncat(black, pos, diff-pos); // copy one input across
+		pos=diff+1;
 		if (*black=='1' || *black=='0' || *black=='*') return true; // end of input
 
 		// promotion

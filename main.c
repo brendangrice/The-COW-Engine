@@ -134,12 +134,12 @@ main(int argc, char **argv)
 		PGNoutput pgn = makePGN(NULL, NULL, NULL, NULL);
 		readPGN(in, &pgn);
 		parsePGN(pgn, &currBoard, flags);
+		if (!(strcmp(pgn.header.result,"*")==0 || strcmp(pgn.header.result,"1/2-1/2")==0)) currBoard.blackplaying=!currBoard.blackplaying; // flip board unless its unfinished or a draw
 		if (!(flags&(ARGP_PGN_ALL|ARGP_PGN_STEP)))
 		{
 			if (~flags&ARGP_PGN_HEADER) printHeader(pgn, stdout);
 			if (flags&ARGP_PGN_PRINT) prettyPrintBoard(currBoard);
 			if (~flags&ARGP_FEN_PRINT) printFEN(currBoard, 0, 0); // TODO FIX THIS UP
-
 		}
 		return 0;
 	}
