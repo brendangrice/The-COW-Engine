@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <argp.h>
 
 #ifndef MAIN_H
 #define MAIN_H
 
+#include "argp.h"
 #include "types.h"
 #include "moves.h"
 #include "pgn.h"

@@ -142,7 +142,7 @@ READPGNBODY:
 }
 
 bool
-parsePGN(PGNoutput po, Boardstate *bs, bool step)
+parsePGN(PGNoutput po, Boardstate *bs, U8 flags)
 {
 	//parse pgn as input
 	char white[9], black[9];
@@ -163,19 +163,25 @@ parsePGN(PGNoutput po, Boardstate *bs, bool step)
 		strncat(black, pos, diff); // copy one input across
 		pos+=diff+1;
 		if (*white=='1' || *white=='0' || *white=='*') return true; // end of input
+
+		// white input
 		parseInput(white, &from, &to); //TODO error checking
 		movePiece(from, to, false);
-		if (step) {
-			printBoard(*bs);
-			getchar();
+		if (flags&(PGN_ALL|PGN_STEP)) {
+			if (flags&PGN_HEADER) printHeader(po, stdout);
+			if (flags&PGN_PRINT) printBoard(*bs);
+			if (flags&PGN_STEP) getchar();
 		}
 		bs->blackplaying=!bs->blackplaying; // switch players
 		if (*black=='1' || *black=='0' || *black=='*') return true; // end of input
+
+		// black input
 		parseInput(black, &from, &to); //TODO error checking
 		movePiece(from, to, false);
-		if (step) {
-			printBoard(*bs);
-			getchar();
+		if (flags&(PGN_ALL|PGN_STEP)) {
+			if (flags&PGN_HEADER) printHeader(po, stdout);
+			if (flags&PGN_PRINT) printBoard(*bs);
+			if (flags&PGN_STEP) getchar();
 		}
 		bs->blackplaying=!bs->blackplaying; // switch players
 	}
@@ -210,13 +216,13 @@ appendMovePGN(Boardstate pre, Boardstate post, PGNoutput *po, Coord from, Coord 
 		if (pieceno == king) { // if the king moved
 			switch(to) {
 				// O-O-O
-				case(5): // queen side white
-				case(61): // queen side black
+				case 5: // queen side white
+				case 61: // queen side black
 					*s++='O';
 					*s++='-';
 				// O-O
-				case(1): // king side white
-				case(57): // king side black
+				case 1: // king side white
+				case 57: // king side black
 					*s++='O';
 					*s++='-';
 					*s++='O';
@@ -281,18 +287,23 @@ APPENDEND: // TODO change more stuff to goto here to skip over more unneccessary
 	strncat(po->pgn, str, stringsize); // copy the new movement to the pgn output
 	return true;
 }
+void
+printHeader(PGNoutput po, FILE *s)
+{
+	fprintf(s, "[Event \"%s\"]\n", po.header.event);
+	fprintf(s, "[Site \"%s\"]\n", po.header.site);
+	fprintf(s, "[Date \"%s\"]\n", po.header.date);
+	fprintf(s, "[Round \"%s\"]\n", po.header.round);
+	fprintf(s, "[White \"%s\"]\n", po.header.white);
+	fprintf(s, "[Black \"%s\"]\n", po.header.black);
+	fprintf(s, "[Result \"%s\"]\n", po.header.result);
+}
 
 bool
 flushPGN(Boardstate bs, PGNoutput po)
 {
 	FILE *fp = fopen(po.fp, "w"); // needs to be rewritten each turn
-	fprintf(fp, "[Event \"%s\"]\n", "a");
-	fprintf(fp, "[Site \"%s\"]\n", po.header.site);
-	fprintf(fp, "[Date \"%s\"]\n", po.header.date);
-	fprintf(fp, "[Round \"%s\"]\n", po.header.round);
-	fprintf(fp, "[White \"%s\"]\n", po.header.white);
-	fprintf(fp, "[Black \"%s\"]\n", po.header.black);
-	fprintf(fp, "[Result \"%s\"]\n", po.header.result);
+	printHeader(po, fp);
 
 	fprintf(fp, "[Time \"%s\"]\n\n", po.header.time);
 

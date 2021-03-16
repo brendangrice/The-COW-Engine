@@ -22,6 +22,11 @@ typedef struct {
 
 #define PGNSTRINGSIZE (4+(18*100)) // about 18 chars per turn at 100 turns with the result being printed at the end
 
+#define PGN_ALL 0x1 // go thorugh all boards
+#define PGN_STEP 0x2 // step through boards
+#define PGN_PRINT 0X4 // print boards that are gone through
+#define PGN_HEADER 0X8 // print the PGN header
+
 typedef struct {
 	PGNheader header;
 	char pgn[PGNSTRINGSIZE]; // body of the moves being made
@@ -43,6 +48,7 @@ PGNoutput makePGN(char *round, char *white, char *black, char *fp); // makes pgn
 bool readPGN(FILE *in, PGNoutput *po);
 bool parsePGN(PGNoutput po, Boardstate *bs, bool step);
 bool appendMovePGN(Boardstate pre, Boardstate post, PGNoutput *po, Coord from, Coord to); // Takes the previous boardstate and the current boardstate to figure out what changes have been made to the board with the moves from and to and updates the pgn body appropriately. Bool returns whether or not it updates successfully
+void printHeader(PGNoutput po, FILE *s); // prints the basic 7 header values of a PGN file
 bool flushPGN(Boardstate bs, PGNoutput po); // writes to file described in po.fp
 bool dumpPGN(Boardstate bs, PGNoutput po); // runs flushPGN and cleans up the memory
 

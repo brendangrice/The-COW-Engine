@@ -27,18 +27,27 @@ const char *argp_prgram_bug_address = "<https://github.com/brendangrice/The-COW-
 
 static char args_doc[] = "[FILE]";
 
-static char doc[] = "Plays Chess.\nWith FILE try to interpret FILE as PGN. When FILE is - read standard input as PGN\v\nPlease report any bugs to <https://github.com/brendangrice/The-COW-Engine>";
+static char doc[] = "Plays Chess.\nWith FILE try to interpret FILE as PGN. When FILE is - read standard input as PGN\n\vmore docs\n";
 
 static struct argp_option options[] = {
-	{"step", 's', 0, OPTION_ARG_OPTIONAL, "Steps through the moves when viewing a PGN file"},
+	{"all", 'a', 0, 0, "Go through every move when viewing a PGN file"},
+	{"step", 's', 0, 0, "Steps through the moves when viewing a PGN file"},
+	{"print", 'p', 0, 0, "Don't print boards when viewing a PGN file"},
+	{"header", 'h', 0, 0, "Toggle printing pgn header when viewing a PGN file"},
 	{"output", 'o', "FILE", 0, "Output PGN notation to specified FILE instead of standard date notation"},
+	{"help", '?', 0, 0, "Give this help list"},
+	{"usage", ARGP_HELP_USAGE, 0, 0, "Give a short usage message"},
+	{"version", 'V', 0, 0, "Print program version"},
 	{ 0 }
 };
 
 struct arguments 
 {
-	char *args;
-	int step;
+	char *arg;
+	bool all;
+	bool step;
+	bool print;
+	bool header;
 	char *output_file;
 };
 
@@ -48,19 +57,38 @@ parse_opt (int key, char *arg, struct argp_state *state)
 	struct arguments *arguments = state->input;
 
 	switch(key) {
-		case('s'):
-			arguments->step = 1;
+		case ARGP_HELP_USAGE:
+			argp_usage(state, stdout);
 			break;
-		case('o'):
+		case 'V':
+			argp_version();
+			break;
+		case '?':
+			argp_help(state, stdout);
+			break;
+		case 'a':
+			arguments->all = true;	
+			break;
+		case 's':
+			arguments->step = true;
+			break;
+		case 'p':
+			arguments->print = false;
+			break;
+		case 'h':
+			arguments->header = true;
+			break;
+		case 'o':
 			arguments->output_file = arg;
 			break;
 
-		case(ARGP_KEY_ARG):
-			if (state->arg_num >= 1) argp_usage(state); // exit here, only takes one input
-			arguments->args = arg;
+		case ARGP_KEY_ARG:
+			if (state->arg_num > 1) argp_usage(state, stderr); // exit here, only takes one input
+			arguments->arg = arg;
 			break;
 		default:
-			return ARGP_ERR_UNKNOWN;
+			argp_usage(state, stderr);
+			break;
 		}
 	return 0;
 }
@@ -75,29 +103,35 @@ main(int argc, char **argv)
 {
 	// if one argument is passed try and take it as input
 	struct arguments arguments;
-	arguments.args = NULL;
-	arguments.step = 0;
+	arguments.arg = NULL;
+	arguments.all = false;
+	arguments.step = false;
+	arguments.print = true;
+	arguments.header = false;
 	arguments.output_file = NULL;
 
 	argp_parse(&argp, argc, argv, 0, 0, &arguments);
-
-	if (arguments.args!=NULL) {
+	// set up the flags
+	U8 flags = arguments.all*PGN_ALL | arguments.step*PGN_STEP | arguments.print*PGN_PRINT | arguments.header*PGN_HEADER;
+	if (arguments.arg!=NULL) {
 		setBitBoard();
 		FILE *in;
-	       	if (strcmp(arguments.args, "-")==0) {
-			in = stdin;	
-		} else	in = fopen(arguments.args, "r"); // TODO error checking
-		PGNoutput haba = makePGN(NULL, NULL, NULL, NULL);
-		readPGN(in, &haba);
-		parsePGN(haba, &currBoard, arguments.step);
-		printf("Event: %s\n", haba.header.event);
-		printf("Site: %s\n", haba.header.site);
-		printf("Date: %s\n", haba.header.date);
-		printf("Round: %s\n", haba.header.round);
-		printf("White: %s\n", haba.header.white);
-		printf("Black: %s\n", haba.header.black);
-		printf("Result: %s\n\n", haba.header.result);
-		printBoard(currBoard);
+	       	if (strcmp(arguments.arg, "-")!=0) {
+			in = fopen(arguments.arg, "r");
+			if (in==NULL) { // bad file
+				fputs("Bad file read in\n", stderr);
+				exit(1);
+			}
+		} else	in = stdin;
+		
+		PGNoutput pgn = makePGN(NULL, NULL, NULL, NULL);
+		readPGN(in, &pgn);
+		parsePGN(pgn, &currBoard, flags);
+		if (!(flags&(PGN_ALL|PGN_STEP)))
+		{
+			if (~flags&PGN_HEADER) printHeader(pgn, stdout);
+			if (flags&PGN_PRINT) printBoard(currBoard);
+		}
 		return 0;
 	}
 	// add stepping
@@ -114,7 +148,7 @@ main(int argc, char **argv)
 		if (*inp == 'Q' || *inp == 'q') return 0;
 		po = makePGN("1", "white", "black", arguments.output_file);
 		switch(*inp) {
-			case('1'):
+			case '1':
 				localMultiplayer(&currBoard);
 				break;
 			default:
@@ -243,19 +277,19 @@ calculateAttackVectors(Board *bitboard, bool blackplaying) //returns an attack v
 			piece-=32*blackplaying; //if the piece is black subtract so that the char goes into the switch cases nicely
 			switch(piece) 
 			{
-				case('R'):
+				case 'R':
 					vector |= rookAttackVectors(i, bitboard);
 					break;
-				case('N'):
+				case 'N':
 					vector |= knightAttackVectors(i);
 					break;
-				case('B'):
+				case 'B':
 					vector |= bishopAttackVectors(i, bitboard);
 					break;
-				case('Q'):
+				case 'Q':
 					vector |= queenAttackVectors(i, bitboard);
 					break;
-				case('K'):
+				case 'K':
 					vector |= kingAttackVectors(i);
 					break;
 			}
@@ -272,24 +306,24 @@ calculateMovementVector(Boardstate bs, Coord pos) //returns a vector for where a
 	bool colour;
 	findPiece(pos, &piece, &colour, bs.bitboard);
 	switch(piece) {
-		case(pawn):
+		case pawn:
 			if (colour) {
 				blackPawnMovement(pos, 0, bs, &vector);
 			} else	whitePawnMovement(pos, 0, bs, &vector);
 			break;
-		case(rook):
+		case rook:
 			rookMovement(pos, 0, bs, &vector);
 			break;
-		case(knight):
+		case knight:
 			knightMovement(pos, 0, bs, &vector);
 			break;
-		case(bishop):
+		case bishop:
 			bishopMovement(pos, 0, bs, &vector);
 			break;
-		case(queen):
+		case queen:
 			queenMovement(pos, 0, bs, &vector);
 			break;
-		case(king):
+		case king:
 			kingMovement(pos, 0, bs, &vector);
 			break;
 		default:
@@ -472,12 +506,12 @@ parseInput(char *s, Coord *from, Coord *to) // used with stdin input TODO USE #D
 
 	if (!INBOUNDS(s[len-2], s[len-1]) & (len>1)) return 0;
 	switch(len) {
-		case(0): // bad input, get input again
+		case 0: // bad input, get input again
 			return 0;
-		case(1): // quit
+		case 1: // quit
 			if ((*s=='q')|(*s=='Q')) return 2;
 			return 0;
-		case(2):// pawn movement
+		case 2:// pawn movement
 			// get playerboard and isolate pawns
 			// highlighting
 			// fauxmove from to
@@ -492,7 +526,7 @@ parseInput(char *s, Coord *from, Coord *to) // used with stdin input TODO USE #D
 			*to = ATOC(s[0], s[1]); // convert format to coordinate
 			// find from
 			return (iterateVector(currBoard, b, p<<*to, from, 2)==1); // if only one piece can move its valid
-		case(3): // move piece/pawn Ne4/de4
+		case 3: // move piece/pawn Ne4/de4
 			 // figure out if the first char is lower or capital
 			 // attempt pawn movement/piece movement
 			
@@ -509,7 +543,7 @@ parseInput(char *s, Coord *from, Coord *to) // used with stdin input TODO USE #D
 			} // make a board of just that file
 			b = getPlayerBoard(currBoard.bitboard, currBoard.blackplaying)&currBoard.bitboard[pawn]&t;
 			return (iterateVector(currBoard, b, p<<*to, from, 2)==1); // only should work if one piece can move there 
-		case(4): // move piece Nce4 / standard positional notation
+		case 4: // move piece Nce4 / standard positional notation
 			*to = ATOC(s[2], s[3]);
 			if (INBOUNDS(s[0], s[1]) && (s[0]<'a')) { // make sure notation is correct
 				// standard positional notation	
@@ -525,7 +559,7 @@ parseInput(char *s, Coord *from, Coord *to) // used with stdin input TODO USE #D
 			} // make a board of just that file
 			b = getPlayerBoard(currBoard.bitboard, currBoard.blackplaying)&currBoard.bitboard[ltoe[(U8) *s]]&t; // get a board of just those pieces on just that file
 			return (iterateVector(currBoard, b, p<<*to, from, 2)==1); // only should work if one piece can move there 
-		case(5): // move piece Nc3e4
+		case 5: // move piece Nc3e4
 			 // make sure that the piece at the from pos matches the char
 			 // standard positional notation move
 			*to = ATOC(s[3], s[4]);
@@ -588,7 +622,7 @@ fauxMove(Coord from, Coord to, Boardstate bs, Boardstate *nbs) // write a compan
 
 	//do testing based on piece
 	switch(frompiece) {
-		case(pawn):
+		case pawn:
 			if (fromcolourblack) {
 				test = blackPawnMovement(from, to, *nbs, NULL);
 				if (test == 2) { //en passant logic
@@ -625,10 +659,10 @@ fauxMove(Coord from, Coord to, Boardstate bs, Boardstate *nbs) // write a compan
 PROMOTION:
 				readInput(pieceno, 2);
 				switch(*pieceno-'0') {
-					case(rook):
-					case(knight):
-					case(bishop):
-					case(queen):
+					case rook:
+					case knight:
+					case bishop:
+					case queen:
 						frompiece=*pieceno;
 						break;
 					default:
@@ -637,19 +671,20 @@ PROMOTION:
 				}
 			}
 			break;
-		case(rook):
+		case rook:
 			test = rookMovement(from, to, *nbs, NULL);
 			break;
-		case(knight):
+		case knight:
 			test = knightMovement(from, to, *nbs, NULL);
 			break;
-		case(bishop):
+		case bishop:
 			test = bishopMovement(from, to, *nbs, NULL); 
 			break;
-		case(queen):
+		case queen:
 			test = queenMovement(from, to, *nbs, NULL);
 			break;
-		case(king):
+		case king:
+			// TODO #DEFINE
 			// return codes:
 			// 0 fail
 			// 1 normal
@@ -660,19 +695,19 @@ PROMOTION:
 			// relevent castle needs to be moved and total updated
 			test = kingMovement(from, to, *nbs, NULL);
 			switch (test) {
-				case(2):
+				case 2:
 					nbs->bitboard[rook]^=p<<7;
 					nbs->bitboard[rook]|=p<<4;
 					nbs->bitboard[total]^=p<<7;
 					nbs->bitboard[total]|=p<<4;
 					break;
-				case(3):
+				case 3:
 					nbs->bitboard[rook]^=1;
 					nbs->bitboard[rook]|=p<<2;
 					nbs->bitboard[total]^=1;
 					nbs->bitboard[total]|=p<<2;
 					break;
-				case(4): // need to update black nbs->bitboard too
+				case 4: // need to update black nbs->bitboard too
 					nbs->bitboard[black]^=p<<63;
 					nbs->bitboard[black]|=p<<60;
 					nbs->bitboard[rook]^=p<<63;
@@ -680,7 +715,7 @@ PROMOTION:
 					nbs->bitboard[total]^=p<<63;
 					nbs->bitboard[total]|=p<<60;
 					break;
-				case(5):
+				case 5:
 					nbs->bitboard[black]^=p<<56;
 					nbs->bitboard[black]|=p<<58;
 					nbs->bitboard[rook]^=p<<56;
