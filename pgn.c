@@ -51,11 +51,11 @@ makePGN(char *round, char *white, char *black, char *fp)
 	if (fp==NULL) {
 		char f[30];
 		memset(f, 0, 30);
-		strncat(f, "pgn/", 5);
-		strncat(f, date, strlen(date)+1);
-		strncat(f, "_", 2);
-		strncat(f, starttime, strlen(starttime)+1);
-		strncat(f, ".pgn", 5);
+		strcat(f, "pgn/");
+		strcat(f, date);
+		strcat(f, "_");
+		strcat(f, starttime);
+		strcat(f, ".pgn");
 		strrep(f, ':', '.');
 		strcpy(po.fp, f);
 	} else 	strcpy(po.fp, fp);
