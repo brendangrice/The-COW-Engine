@@ -35,8 +35,11 @@ makePGN(char *round, char *white, char *black, char *fp)
 	strcpy(po.header.site, site);
 
 	char date[11];
-	strftime(date, 11, "%F", tm);
-	strrep(date, '-', '.');
+	strftime(date, 11, "%Y", tm);
+	date[4] = '.';
+	strftime(date+5, 7, "%m", tm); // safe to assume the average COW user is not living to 10,000AD
+	date[7] = '.';
+	strftime(date+8, 3, "%d", tm); // has to be done like this for windows
 	strcpy(po.header.date, date);
 	strcpy(po.header.round, round);
 	strcpy(po.header.white, white);
@@ -44,10 +47,15 @@ makePGN(char *round, char *white, char *black, char *fp)
 	strcpy(po.header.result, "*");
 
 	char starttime[9];
-	strftime(starttime, 9, "%T", tm);
+	strftime(starttime, 9, "%H", tm);
+	starttime[2] = '.';
+	strftime(starttime+3, 6, "%M", tm); // safe to assume the average COW user is not living to 10,000AD
+	starttime[5] = '.';
+	strftime(starttime+6, 3, "%S", tm); // has to be done like this for windows
+
 	strcpy(po.header.time, starttime);
 	memset(po.pgn, 0, PGNSTRINGSIZE);
-	po.fp = malloc(30);
+	po.fp = malloc(30); // TODO this probably doesn't have to be allocated
 	if (fp==NULL) {
 		char f[30];
 		memset(f, 0, 30);

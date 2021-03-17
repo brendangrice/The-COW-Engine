@@ -5,40 +5,40 @@
  */
 
 error_t 
-argp_parse (const struct argp *__restrict __argp, int __argc, char **__restrict __argv, unsigned __flags, int *__restrict argv, void *__restrict __input) 
+argp_parse (const struct argp *_argp, int _argc, char **_argv, unsigned _flags, int *argv, void *_input) 
 {
-	// iterate through arguments and try to parse with __argp->parser
+	// iterate through arguments and try to parse with _argp->parser
 	char *str;
-	struct argp_state __argp_state;
-	__argp_state.argc = __argc;
-	__argp_state.argv = __argv;
-	__argp_state.input = __input;
-	__argp_state.arg_num = 1; // only handling one at a time
-	__argp_state.root_argp = __argp;
+	struct argp_state _argp_state;
+	_argp_state.argc = _argc;
+	_argp_state.argv = _argv;
+	_argp_state.input = _input;
+	_argp_state.arg_num = 1; // only handling one at a time
+	_argp_state.root_argp = _argp;
 
-	for (int i = 1; i<__argc; i++) {
-		__argp_state.next = i;
-		if(__argv[i][0] == '-') { // some sort of argument
-			if(__argv[i][1] == '-') { // some sort of argument string
+	for (int i = 1; i<_argc; i++) {
+		_argp_state.next = i;
+		if(_argv[i][0] == '-') { // some sort of argument
+			if(_argv[i][1] == '-') { // some sort of argument string
 				// iterate through and match with name
-				str = __argv[i]+2; // str after --
+				str = _argv[i]+2; // str after --
 				int match = 1;
-				for (int j=0; __argp->options[j].name != NULL || __argp->options[j].key != 0; j++) {
-					if (strcmp(str, __argp->options[j].name)==0) { // try to find a match
-						__argp->parser( __argp->options[j].key, __argv[j+1], &__argp_state );
+				for (int j=0; _argp->options[j].name != NULL || _argp->options[j].key != 0; j++) {
+					if (strcmp(str, _argp->options[j].name)==0) { // try to find a match
+						_argp->parser( _argp->options[j].key, _argv[j+1], &_argp_state );
 						match = 0;
 					}
 				}
-				if (match) argp_usage(&__argp_state, stderr); // if no match was found
+				if (match) argp_usage(&_argp_state, stderr); // if no match was found
 			} else { // else there's a flag
 				int pos = 1;
 				// while there are flags to parse
-				while (__argv[i][pos]) __argp->parser( __argv[i][pos++], __argv[i+1], &__argp_state );
+				while (_argv[i][pos]) _argp->parser( _argv[i][pos++], _argv[i+1], &_argp_state );
 			}
 		} else { //loose
-			__argp->parser( ARGP_KEY_ARG, __argv[i], &__argp_state );
+			_argp->parser( ARGP_KEY_ARG, _argv[i], &_argp_state );
 		}
-		if (__argp_state.next>i) i = __argp_state.next;
+		if (_argp_state.next>i) i = _argp_state.next;
 	}
 	return 0;
 }
