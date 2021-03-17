@@ -68,7 +68,7 @@ struct argp_state
 
 };
 
-error_t argp_parse (const struct argp *__restrict __argp, int __argc, char **__restrict __argv, unsigned __flags, int *__restrict argv, void *__restrict __input); // takes the same input as <argp.h>
+error_t argp_parse (const struct argp *_argp, int _argc, char **_argv, unsigned _flags, int *argv, void *_input); // takes the same input as <argp.h>
 
 void argp_usage (const struct argp_state *__restrict _state, FILE *stream);
 void argp_help (const struct argp_state *__restrict __state, FILE *stream);
