@@ -18,7 +18,7 @@ argp_parse (const struct argp *_argp, int _argc, char **_argv, unsigned _flags, 
 
 	for (int i = 1; i<_argc; i++) {
 		_argp_state.next = i;
-		if(_argv[i][0] == '-') { // some sort of argument
+		if(_argv[i][0] == '-' && strlen(_argv[i])>1) { // some sort of argument
 			if(_argv[i][1] == '-') { // some sort of argument string
 				// iterate through and match with name
 				str = _argv[i]+2; // str after --

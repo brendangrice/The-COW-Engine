@@ -55,9 +55,8 @@ makePGN(char *round, char *white, char *black, char *fp)
 
 	strcpy(po.header.time, starttime);
 	memset(po.pgn, 0, PGNSTRINGSIZE);
-	po.fp = malloc(30); // TODO this probably doesn't have to be allocated
 	if (fp==NULL) {
-		char f[30];
+		char f[30]; // never needs to be any larger
 		memset(f, 0, 30);
 		strcat(f, "pgn/");
 		strcat(f, date);
@@ -192,7 +191,7 @@ parsePGN(PGNoutput po, Boardstate *bs, U8 flags)
 		if (flags&(ARGP_PGN_ALL|ARGP_PGN_STEP)) {
 			if (flags&ARGP_PGN_HEADER) printHeader(po, stdout);
 			if (flags&ARGP_PGN_PRINT) prettyPrintBoard(*bs);
-			if (flags&ARGP_FEN_PRINT) printFEN(*bs, 0, 0); // TODO FIX THIS UP
+			if (flags&ARGP_PGN_FEN_PRINT) printFEN(*bs, 0, 0);
 
 
 			if (flags&ARGP_PGN_STEP) if ((c=getchar())=='q' || c==EOF) return true;
@@ -217,7 +216,7 @@ parsePGN(PGNoutput po, Boardstate *bs, U8 flags)
 		if (flags&(ARGP_PGN_ALL|ARGP_PGN_STEP)) {
 			if (flags&ARGP_PGN_HEADER) printHeader(po, stdout);
 			if (flags&ARGP_PGN_PRINT) prettyPrintBoard(*bs);
-			if (flags&ARGP_FEN_PRINT) printFEN(*bs, 0, 0); // TODO FIX THIS UP
+			if (flags&ARGP_PGN_FEN_PRINT) printFEN(*bs, 0, 0);
 
 
 			if (flags&ARGP_PGN_STEP) if ((c=getchar())=='q' || c==EOF) return true;
@@ -355,14 +354,6 @@ flushPGN(Boardstate bs, PGNoutput po)
 
 	fputs(po.pgn, fp);
 	fclose(fp);
-	return true;
-}
-
-bool
-dumpPGN(Boardstate bs, PGNoutput po) // write with flushPGN and then free memory
-{
-	flushPGN(bs, po);
-	free(po.fp);
 	return true;
 }
 

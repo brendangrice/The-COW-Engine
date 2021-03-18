@@ -11,8 +11,7 @@ const U8 ltoe[] = { // lookup table for converting letters to enum representatio
 	_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
 	_, _, _, _, _, _, bishop, _, _, _, _, _, _, _, _, king, _, _, knight, _, 
 	pawn, queen, rook, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, bishop, _,
-       	_, _, _, _, _, _, _, king, _, _, knight, _, pawn, queen, rook
-
+	_, _, _, _, _, _, _, king, _, _, knight, _, pawn, queen, rook
 };
 #undef _
 
@@ -26,14 +25,16 @@ const char *argp_prgram_bug_address = "<https://github.com/brendangrice/The-COW-
 
 static char args_doc[] = "[FILE]";
 
-static char doc[] = "Plays Chess.\nWith FILE try to interpret FILE as PGN. When FILE is - read standard input as PGN\n\vmore docs\n";
+static char doc[] = "Plays Chess.\nWith FILE try to interpret FILE as PGN or FEN. When FILE is - read standard input as PGN or FEN\n\vIf -P or -F aren't given but - or a path is given COW tries to guess if it's PGN or FEN\n";
 
 static struct argp_option options[] = {
+	{"pgn", 'P', 0, 0, "Take in PGN input"},
 	{"all", 'a', 0, 0, "Go through every move when viewing a PGN file"},
 	{"step", 's', 0, 0, "Steps through the moves when viewing a PGN file"},
 	{"print", 'p', 0, 0, "Don't print boards when viewing a PGN file"},
 	{"header", 'h', 0, 0, "Toggle printing pgn header when viewing a PGN file"},
-	{"fen", 'f', 0, 0, "Toggles printing FEN string for the current Board when viewing a PGN file"},
+	{"fen-print", 'f', 0, 0, "Toggles printing FEN string for the current Board when viewing a PGN file"},
+	{"fen", 'F', 0, 0, "Take in FEN input"},
 	{"output", 'o', "FILE", 0, "Output PGN notation to specified FILE instead of standard date notation"},
 	{"help", '?', 0, 0, "Give this help list"},
 	{"usage", ARGP_HELP_USAGE, 0, 0, "Give a short usage message"},
@@ -45,9 +46,11 @@ struct arguments
 {
 	char *arg;
 	bool all;
+	bool pgn;
 	bool step;
 	bool print;
 	bool header;
+	bool fenprint;
 	bool fen;
 	char *output_file;
 };
@@ -67,6 +70,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
 		case '?':
 			argp_help(state, stdout);
 			break;
+		case 'P':
+			arguments->pgn = true;
+			break;
 		case 'a':
 			arguments->all = true;	
 			break;
@@ -80,6 +86,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
 			arguments->header = true;
 			break;
 		case 'f':
+		      	arguments->fenprint = true;
+		      	break;
+		case 'F':
 		      	arguments->fen = true;
 		      	break;
 		case 'o':
@@ -92,7 +101,6 @@ parse_opt (int key, char *arg, struct argp_state *state)
 			arguments->arg = arg;
 			break;
 		default:
-			printf("%d %c\n", key, key);
 			argp_usage(state, stderr);
 			break;
 		}
@@ -110,43 +118,69 @@ main(int argc, char **argv)
 	// if one argument is passed try and take it as input
 	struct arguments arguments;
 	arguments.arg = NULL;
+	arguments.pgn = false;
 	arguments.all = false;
 	arguments.step = false;
 	arguments.print = true;
 	arguments.header = false;
+	arguments.fenprint = false;
 	arguments.fen = false;
 	arguments.output_file = NULL;
 
 	argp_parse(&argp, argc, argv, 0, 0, &arguments);
 	// set up the flags
-	U8 flags = arguments.all*ARGP_PGN_ALL | arguments.step*ARGP_PGN_STEP | arguments.print*ARGP_PGN_PRINT | arguments.header*ARGP_PGN_HEADER | arguments.fen*ARGP_FEN_PRINT;
-	if (arguments.arg!=NULL) {
-		setBitBoard();
-		FILE *in;
-	       	if (strcmp(arguments.arg, "-")!=0) {
-			in = fopen(arguments.arg, "r");
-			if (in==NULL) { // bad file
-				fputs("Bad file read in\n", stderr);
-				exit(1);
+	U8 flags = arguments.pgn*ARGP_PGN_PARSE | arguments.all*ARGP_PGN_ALL | arguments.step*ARGP_PGN_STEP | arguments.print*ARGP_PGN_PRINT | arguments.header*ARGP_PGN_HEADER | arguments.fenprint*ARGP_PGN_FEN_PRINT | arguments.fen*ARGP_FEN_PARSE; // if there's many more args flags will be too cumbersome to use, should switch to passing/reading arguments
+	if ( (arguments.arg!=NULL) | (flags&ARGP_FEN_PARSE) | (flags&ARGP_PGN_PARSE) ) {
+		if ( !((flags&ARGP_FEN_PARSE) | (flags&ARGP_PGN_PARSE)) ) { // neither is specified, tried to figure out which is given
+			if (arguments.arg == NULL || strcmp(arguments.arg, "-")==0) { // read from stdin
+				char c = getchar();
+				ungetc(c, stdin);
+				//probably pgn
+				if ( (c == '\n') | (c == '[') ) flags |= ARGP_PGN_PARSE;
+				//probably fen
+				if (c <= 'z' && c >= 'a') flags |= ARGP_FEN_PARSE;
 			}
-		} else	in = stdin;
-		
-		PGNoutput pgn = makePGN(NULL, NULL, NULL, NULL);
-		readPGN(in, &pgn);
-		parsePGN(pgn, &currBoard, flags);
-		if (!(strcmp(pgn.header.result,"*")==0 || strcmp(pgn.header.result,"1/2-1/2")==0)) currBoard.blackplaying=!currBoard.blackplaying; // flip board unless its unfinished or a draw
-		if (!(flags&(ARGP_PGN_ALL|ARGP_PGN_STEP)))
-		{
-			if (~flags&ARGP_PGN_HEADER) printHeader(pgn, stdout);
-			if (flags&ARGP_PGN_PRINT) prettyPrintBoard(currBoard);
-			if (~flags&ARGP_FEN_PRINT) printFEN(currBoard, 0, 0); // TODO FIX THIS UP
 		}
-		return 0;
-	}
+		if (flags&ARGP_PGN_PARSE) {
+			setBitBoard();
+			FILE *in;
+			if (arguments.arg != NULL && strcmp(arguments.arg, "-")!=0) {
+				in = fopen(arguments.arg, "r");
+				if (in==NULL) { // bad file
+					fputs("Bad file read in\n", stderr);
+					exit(1);
+				}
+			} else	in = stdin;
+			
+			PGNoutput pgn = makePGN(NULL, NULL, NULL, NULL);
+			readPGN(in, &pgn);
+			parsePGN(pgn, &currBoard, flags);
+			if (!(strcmp(pgn.header.result,"*")==0 || strcmp(pgn.header.result,"1/2-1/2")==0)) currBoard.blackplaying=!currBoard.blackplaying; // flip board unless its unfinished or a draw
+			if (!(flags&(ARGP_PGN_ALL|ARGP_PGN_STEP)))
+			{
+				if (~flags&ARGP_PGN_HEADER) printHeader(pgn, stdout);
+				if (flags&ARGP_PGN_PRINT) prettyPrintBoard(currBoard);
+				if (~flags&ARGP_PGN_FEN_PRINT) printFEN(currBoard, 0, 0); // TODO FIX THIS UP
+			}
+			return 0;
+		}
+
+		if (flags&ARGP_FEN_PARSE) {
+
+			char fenstring[60]; // about 60 chars long
+			if (arguments.arg == NULL || strcmp(arguments.arg, "-")==0) { // read from stdin
+				fgets(fenstring, 60, stdin); // read in the FEN string
+				setBitBoardFromFEN(fenstring); // needs some error checking
+				if (!isatty(STDIN_FILENO)) { // maybe reopen stdin to clear the piping??
+					prettyPrintBoard(currBoard);
+					return 0; // have to return here if we're piping in
+				}
+			} else 	setBitBoardFromFEN(FENBOARDDEFAULT); // just in case
+		}
+	} else 	setBitBoardFromFEN(FENBOARDDEFAULT); // still needs to be se
 
 	char inp[2]; // input
 	while (1) {
-		setBitBoardFromFEN();
 	       	puts("Select your gamemode.");
 		puts("Local multiplayer: 1");
 		puts("Local AI: 2");
@@ -160,14 +194,14 @@ main(int argc, char **argv)
 			case '1':
 				localMultiplayer(&currBoard);
 				break;
-			case('2'):
+			case '2':
 				localAI(&currBoard);
 				break;
 			default:
 				puts("Bad Input");
 				break;
 		}
-		dumpPGN(currBoard, po);
+		setBitBoardFromFEN(FENBOARDDEFAULT);
 	}
 	return 0;
 }
@@ -209,12 +243,11 @@ setBitBoard()
 	currBoard.bitboard[total] = currBoard.bitboard[pawn]|currBoard.bitboard[rook]|currBoard.bitboard[knight]|currBoard.bitboard[bishop]|currBoard.bitboard[queen]|currBoard.bitboard[king];
 }
 void
-setBitBoardFromFEN()
+setBitBoardFromFEN(char *FEN)
 {
 	prevBoard = makeBoardstate(NULL, 0, 0);
 	currBoard = makeBoardstate(NULL, 0, 0);
 	
-	char *FEN = FENBOARDDEFAULT;
 	currBoard = parseFEN(FEN, currBoard);
 }
 
@@ -499,6 +532,135 @@ void printFEN(Boardstate bs, Coord from, Coord to)
 	printf("\n");
 }
 
+Boardstate
+parseFEN(char *FEN, Boardstate bs)
+{
+	strrep(FEN, '\n', 0);
+	// reset the board
+	for(int i = 0 ; i < BITBOARDELEMENTS; i++)
+	{
+		bs.bitboard[i] = 0;
+	}
+	
+	bs.movementflags = 0;
+	bs.blackplaying = false;
+	
+	int rank = 8; // start on the 8 rank
+	int file = 0; // start at the A file
+	int count = 0;
+	char piece = '.'; // hold the piece
+	bool isBlack = false; // indicate if the piece is black
+	while((rank >= 1) && *FEN) // while on the board and there is FEN to be parsed
+	{
+		count = 1;
+		
+		piece = *FEN;
+		isBlack = *FEN>'R';
+		switch(*FEN)
+		{
+			// black piece
+			case 'p' : 
+			case 'r' : 
+			case 'n' : 
+			case 'b' : 
+			case 'k' : 
+			case 'q' :
+			// white piece
+			case 'P' : 
+			case 'R' : 
+			case 'N' : 
+			case 'B' : 
+			case 'K' : 
+			case 'Q' : break;
+			// number of empty
+			case '1' : 
+			case '2' : 
+			case '3' : 
+			case '4' : 
+			case '5' : 
+			case '6' : 
+			case '7' : 
+			case '8' : piece = nopiece; count = *FEN - '0'; break;
+			// formatting
+			case '/' :
+			case ' ' : rank--; file = 0; FEN++; continue;
+			// error
+			default  : puts("\nSomething Went Wrong!"); exit(1); // cheeky exit
+		}
+		for(int i = 0; i < count; i++)
+		{
+			//int square = rank * 8 + file;
+			if(piece != nopiece)
+			{
+				
+				char letter = 'A'+file;
+				char number = '0'+rank;
+				
+				U64 file_ID = 0;
+				U64 rank_ID = 0;
+				
+				U8 type = 0;
+				
+				if ((letter<'A') || (letter>'H')) {
+					puts("\nSomething Went Wrong"); 
+					exit(1); // cheeky exit
+				}
+				
+				file_ID = 0x0101010101010101*(1<<('H'-letter));
+
+				if ((number<'1') || (number>'8')) {
+					puts("\nSomething Went Wrong"); 
+					exit(1); // cheeky exit
+				}
+				
+				rank_ID = (0x00000000000000FF*1ULL)<<(8*(number-'1'));
+
+				type = ltoe[(U8) piece];
+				if (type == nopiece) {
+					puts("\nSomething Went Wrong"); 
+					exit(1);
+				}
+
+				U64 square = (file_ID&rank_ID);
+				bs.bitboard[type] += square;
+				if(isBlack) bs.bitboard[black] += square;
+			}
+			file++;
+		}
+		FEN++;
+	}
+	
+	// combine all of the values
+	
+	bs.bitboard[total] = 	bs.bitboard[pawn]|
+				bs.bitboard[rook]|
+				bs.bitboard[knight]|
+				bs.bitboard[bishop]|
+				bs.bitboard[queen]|
+				bs.bitboard[king];
+	// assign side to move
+	bs.blackplaying = (*FEN == 'b');
+	FEN+=2;
+
+	// assign castling rights
+	for(int i = 0; i < 4; i++)
+	{
+		if(*FEN == ' ') break;
+		switch(*FEN)
+		{
+			case 'K' : bs.movementflags |= 0x80; break;
+			case 'Q' : bs.movementflags |= 0x40; break;
+			case 'k' : bs.movementflags |= 0x20; break;
+			case 'q' : bs.movementflags |= 0x10; break;
+			default  : break;
+		}
+		FEN++;
+	}
+	
+	// TODO assign enpassant to movement flags
+	
+	return bs;
+}
 
 void prettyPrintBoard(Boardstate bs)
 {
@@ -627,134 +789,6 @@ printHighlightBoard(Boardstate bs, Board highlights)
 }
 
 
-Boardstate
-parseFEN(char *FEN, Boardstate bs)
-{
-	// reset the board
-	for(int i = 0 ; i < BITBOARDELEMENTS; i++)
-	{
-		bs.bitboard[i] = 0;
-	}
-	
-	bs.movementflags = 0;
-	bs.blackplaying = false;
-	
-	int rank = 8; // start on the 8 rank
-	int file = 0; // start at the A file
-	int count = 0;
-	char piece = '.'; // hold the piece
-	bool isBlack = false; // indicate if the piece is black
-	while((rank >= 1) && *FEN) // while on the board and there is FEN to be parsed
-	{
-		count = 1;
-		
-		piece = *FEN;
-		isBlack = *FEN>'R';
-		switch(*FEN)
-		{
-			// black piece
-			case 'p' : 
-			case 'r' : 
-			case 'n' : 
-			case 'b' : 
-			case 'k' : 
-			case 'q' :
-			// white piece
-			case 'P' : 
-			case 'R' : 
-			case 'N' : 
-			case 'B' : 
-			case 'K' : 
-			case 'Q' : break;
-			// number of empty
-			case '1' : 
-			case '2' : 
-			case '3' : 
-			case '4' : 
-			case '5' : 
-			case '6' : 
-			case '7' : 
-			case '8' : piece = nopiece; count = *FEN - '0'; break;
-			// formatting
-			case '/' :
-			case ' ' : rank--; file = 0; FEN++; continue;
-			// error
-			default  : puts("\nSomething Went Wrong!"); exit(1); // cheeky exit
-		}
-		for(int i = 0; i < count; i++)
-		{
-			//int square = rank * 8 + file;
-			if(piece != nopiece)
-			{
-				
-				char letter = 'A'+file;
-				char number = '0'+rank;
-				
-				U64 file_ID = 0;
-				U64 rank_ID = 0;
-				
-				U8 type = 0;
-				
-				if ((letter<'A') || (letter>'H')) {
-					puts("\nSomething Went Wrong"); 
-					exit(1); // cheeky exit
-				}
-				
-				file_ID = 0x0101010101010101*(1<<('H'-letter));
-
-				if ((number<'1') || (number>'8')) {
-					puts("\nSomething Went Wrong"); 
-					exit(1); // cheeky exit
-				}
-				
-				rank_ID = (0x00000000000000FF*1ULL)<<(8*(number-'1'));
-
-				type = ltoe[(U8) piece];
-				if (type == nopiece) {
-					puts("\nSomething Went Wrong"); 
-					exit(1);
-				}
-
-				U64 square = (file_ID&rank_ID);
-				bs.bitboard[type] += square;
-				if(isBlack) bs.bitboard[black] += square;
-			}
-			file++;
-		}
-		FEN++;
-	}
-	
-	// combine all of the values
-	
-	bs.bitboard[total] = 	bs.bitboard[pawn]|
-				bs.bitboard[rook]|
-				bs.bitboard[knight]|
-				bs.bitboard[bishop]|
-				bs.bitboard[queen]|
-				bs.bitboard[king];
-	// assign side to move
-	bs.blackplaying = (*FEN == 'b');
-	FEN+=2;
-
-	// assign castling rights
-	for(int i = 0; i < 4; i++)
-	{
-		if(*FEN == ' ') break;
-		switch(*FEN)
-		{
-			case 'K' : bs.movementflags |= 0x80; break;
-			case 'Q' : bs.movementflags |= 0x40; break;
-			case 'k' : bs.movementflags |= 0x20; break;
-			case 'q' : bs.movementflags |= 0x10; break;
-			default  : break;
-		}
-		FEN++;
-	}
-	
-	// TODO assign enpassant to movement flags
-	
-	return bs;
-}
 U8 // return number of chars read in
 readInput(char *s, U8 strsize) 
 {

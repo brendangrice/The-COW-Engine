@@ -25,7 +25,7 @@ typedef struct {
 typedef struct {
 	PGNheader header;
 	char pgn[PGNSTRINGSIZE]; // body of the moves being made
-	char *fp; // string representation of the path being saved to
+	char fp[100]; // string representation of the path being saved to
 } PGNoutput;
 
 
@@ -45,6 +45,5 @@ bool parsePGN(PGNoutput po, Boardstate *bs, bool step);
 bool appendMovePGN(Boardstate pre, Boardstate post, PGNoutput *po, Coord from, Coord to); // Takes the previous boardstate and the current boardstate to figure out what changes have been made to the board with the moves from and to and updates the pgn body appropriately. Bool returns whether or not it updates successfully
 void printHeader(PGNoutput po, FILE *s); // prints the basic 7 header values of a PGN file
 bool flushPGN(Boardstate bs, PGNoutput po); // writes to file described in po.fp
-bool dumpPGN(Boardstate bs, PGNoutput po); // runs flushPGN and cleans up the memory
 
 #endif //PGN_H
