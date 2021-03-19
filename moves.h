@@ -111,4 +111,4 @@ Board kingAttackVectors(Coord pos, Board *bitboard);
 extern bool (*movementVectors[]) (Coord from, Coord to, Boardstate bs, Board *vector);
 extern Board (*attackVectors[]) (Coord pos, Board *bitboard);
 
-#endif
+#endif // MOVES_H

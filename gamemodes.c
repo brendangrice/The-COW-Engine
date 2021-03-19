@@ -1,6 +1,6 @@
 #include "gamemodes.h"
 
-// maybe get this to return something different depending on who wins?
+//TODO get this to return something different depending on who wins?
 void
 localMultiplayer(Boardstate *currBoard)
 {
@@ -27,12 +27,11 @@ localMultiplayer(Boardstate *currBoard)
 			puts("Checkmate");
 			break; // end game
 		}
-		if(inStaleMate(*currBoard)) {
+		if(inStaleMate(*currBoard) || currBoard->halfmove-currBoard->fiftymove==50) {
 			prettyPrintBoard(*currBoard);
 			puts("Stalemate");
 			break; // end game
 		}
-		currBoard->blackplaying?puts("\nBlack to play"):puts("\nWhite to play");
 		puts(currBoard->blackplaying?"\nBlack to play":"\nWhite to play");
 		if(inCheck(*currBoard)) puts("Check");
 		prettyPrintBoard(*currBoard);

@@ -234,7 +234,7 @@ NegaMax(int depth, Boardstate bs, bool isBlack, float alpha, float beta)
 			Coord one = from[f];
 			Coord two = to[t];
 			// create a new boardstate
-			Boardstate newbs = makeBoardstate(NULL, bs.movementflags, bs.blackplaying);
+			Boardstate newbs;
 			// ensure that the move is valid
 			if(fauxMove(one, two, bs, &newbs, piecePromotionAI))
 			{
@@ -286,7 +286,7 @@ calculateBestMove(Boardstate bs, bool isBlack, int depth, Coord *coord1, Coord *
 			Coord one = from[f]; 
 			Coord two = to[t];
 			// create a new boardstate
-			Boardstate newbs = makeBoardstate(NULL, bs.movementflags, bs.blackplaying);
+			Boardstate newbs;
 			// ensure that the move is valid			
 			if(fauxMove(one, two, bs, &newbs, piecePromotionAI))
 			{

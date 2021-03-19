@@ -79,16 +79,6 @@ int kingEndPosition[64] = {
 	-50,-30,-30,-30,-30,-30,-30,-50
 };
 
-
-int 
-numberOfBits(Board b)
-{
-	unsigned x = 0;
-	for(x = 0; b; x++)
-		b&=b-1;
-	return x;
-}
-
 int
 calculatePositionAdvantage(Boardstate state)
 {	
@@ -201,38 +191,38 @@ int
 calculateMaterialAdvantage(Boardstate state)
 {
 	// Get count of each type of piece on the board
-	int totalPawns = numberOfBits(state.bitboard[pawn]);
-	int totalQueens = numberOfBits(state.bitboard[queen]);
-	int totalBishops = numberOfBits(state.bitboard[bishop]);
-	int totalKnights = numberOfBits(state.bitboard[knight]);
-	int totalRooks = numberOfBits(state.bitboard[rook]);
-	int totalKings = numberOfBits(state.bitboard[king]);
+	int totalPawns = popcnt(state.bitboard[pawn]);
+	int totalQueens = popcnt(state.bitboard[queen]);
+	int totalBishops = popcnt(state.bitboard[bishop]);
+	int totalKnights = popcnt(state.bitboard[knight]);
+	int totalRooks = popcnt(state.bitboard[rook]);
+	int totalKings = popcnt(state.bitboard[king]);
 
 	    // Distingush between white and black pawns
 
 	    // pawns
-	int blackPawns = numberOfBits(state.bitboard[black]&state.bitboard[pawn]);
+	int blackPawns = popcnt(state.bitboard[black]&state.bitboard[pawn]);
 	int whitePawns = totalPawns-blackPawns;
 
 	// queens
-	int blackQueens = numberOfBits(state.bitboard[black]&state.bitboard[queen]);
+	int blackQueens = popcnt(state.bitboard[black]&state.bitboard[queen]);
 	int whiteQueens = totalQueens-blackQueens;
 
 
 	// bishops
-	int blackBishops = numberOfBits(state.bitboard[black]&state.bitboard[bishop]);
+	int blackBishops = popcnt(state.bitboard[black]&state.bitboard[bishop]);
 	int whiteBishops = totalBishops-blackBishops;
 
 	// knights
-	int blackKnights = numberOfBits(state.bitboard[black]&state.bitboard[knight]);
+	int blackKnights = popcnt(state.bitboard[black]&state.bitboard[knight]);
 	int whiteKnights = totalKnights-blackKnights;
 
 	// rooks
-	int blackRooks = numberOfBits(state.bitboard[black]&state.bitboard[rook]);
+	int blackRooks = popcnt(state.bitboard[black]&state.bitboard[rook]);
 	int whiteRooks = totalRooks-blackRooks;
 
 	// kings
-	int blackKings = numberOfBits(state.bitboard[black]&state.bitboard[king]);
+	int blackKings = popcnt(state.bitboard[black]&state.bitboard[king]);
 	int whiteKings = totalKings-blackKings;
 
 	    // Calculate Black and White material value using the count of pieces that they have

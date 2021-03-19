@@ -7,6 +7,7 @@
 
 #include "types.h"
 #include "main.h"
+#include "fen.h"
 
 #define PGNHEADERSIZE 80
 

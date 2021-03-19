@@ -33,9 +33,11 @@ typedef U64 Board; //used for representing bitboards, helps with legibility and 
 //maybe make these sizeof's into const variables to reduce the number of times sizeof is used?
 
 typedef struct {
-	Board bitboard[BITBOARDELEMENTS];
-	U8 movementflags;
-	bool blackplaying;
+	Board bitboard[BITBOARDELEMENTS]; // tracks the board and pieces
+	U8 movementflags; // tracks en passant and castling
+	bool blackplaying; // tracks which player's turn it is
+	U16 halfmove; // counts the number of half moves made
+	U16 fiftymove; // tracks the last time a move was made that interacts with the fifty move rule
 } Boardstate;
 
 
