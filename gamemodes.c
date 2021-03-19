@@ -4,7 +4,7 @@
 void
 localMultiplayer(Boardstate *currBoard)
 {
-	puts("White to play");
+	puts(currBoard->blackplaying?"\nBlack to play":"\nWhite to play");
 	prettyPrintBoard(*currBoard);
 
 	U8 result = 0;
@@ -33,6 +33,7 @@ localMultiplayer(Boardstate *currBoard)
 			break; // end game
 		}
 		currBoard->blackplaying?puts("\nBlack to play"):puts("\nWhite to play");
+		puts(currBoard->blackplaying?"\nBlack to play":"\nWhite to play");
 		if(inCheck(*currBoard)) puts("Check");
 		prettyPrintBoard(*currBoard);
 	}

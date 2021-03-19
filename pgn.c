@@ -1,6 +1,4 @@
 #include "pgn.h"
-#include "main.h"
-#include "types.h"
 
 // PGN Format
 // [Event "Casual Game"]
@@ -83,6 +81,7 @@ readPGN(FILE *in, PGNoutput *po)
 	char inp[PGNHEADERSIZE]; //should only ever be as large as the largest header
 	while (1) {
 		c = fgetc(in);
+		if (isspace(c)) continue;
 		if (c=='1') goto READPGNBODY; // no header 
 		if (c=='[') break; // header
 		if (c==EOF) return false;
@@ -124,7 +123,7 @@ readPGN(FILE *in, PGNoutput *po)
 	// discard everything else
 	while (1) {
 		c = fgetc(in);
-		if (c=='\n') continue; // skip this line
+		if (isspace(c)) continue; // skip this line
 		if (c=='1') break; // found the body
 		while ((d=fgetc(in))!='\n' && d!=EOF); // go to next line	
 	}
@@ -138,9 +137,14 @@ READPGNBODY:
 		if (c==EOF) return false; // body ended prematurely
 		if (c=='\n') c=' ';
 		po->pgn[i] = c;
-		if (c=='*') break; // all exit cases, *, 1-0, 0-1, 1/2
-		if (c=='-'&&po->pgn[i-1]!='O'){
+		if (c=='*') { // all exit cases, *, 1-0, 0-1, 1/2
+			strcpy(po->header.result, "*"); // redundancy
 			while((c=fgetc(in))!=EOF && c!='\n') po->pgn[++i] = c; // append the rest
+			break;
+		}
+		if (c=='-'&&po->pgn[i-1]!='O') { // don't pick up castling
+			while((c=fgetc(in))!=EOF && c!='\n') po->pgn[++i] = c; // append the rest
+			strcpy(po->header.result, po->pgn+i-2); // redundancy
 			break;
 		}
 	}
@@ -156,8 +160,8 @@ promotionPGN()
 }
 
 bool
-parsePGN(PGNoutput po, Boardstate *bs, U8 flags)
-{
+parsePGN(PGNoutput po, Boardstate *bs, U8 flags) // maybe remove all spaces to make parsing easier??
+{ 
 	//parse pgn as input
 	char white[9], black[9];
 	Coord from, to;

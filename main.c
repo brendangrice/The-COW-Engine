@@ -15,6 +15,8 @@ const U8 ltoe[] = { // lookup table for converting letters to enum representatio
 };
 #undef _
 
+//TODO use ctype checks for digits and letters
+
 // START OF ARGP
 
 // read in PGN file and be able to play that out
@@ -115,6 +117,7 @@ static struct argp argp = {options, parse_opt, args_doc, doc};
 int 
 main(int argc, char **argv) 
 {
+	
 	// if one argument is passed try and take it as input
 	struct arguments arguments;
 	arguments.arg = NULL;
@@ -128,6 +131,8 @@ main(int argc, char **argv)
 	arguments.output_file = NULL;
 
 	argp_parse(&argp, argc, argv, 0, 0, &arguments);
+	po = makePGN("1", "white", "black", arguments.output_file); // set up pgn
+
 	// set up the flags
 	U8 flags = arguments.pgn*ARGP_PGN_PARSE | arguments.all*ARGP_PGN_ALL | arguments.step*ARGP_PGN_STEP | arguments.print*ARGP_PGN_PRINT | arguments.header*ARGP_PGN_HEADER | arguments.fenprint*ARGP_PGN_FEN_PRINT | arguments.fen*ARGP_FEN_PARSE; // if there's many more args flags will be too cumbersome to use, should switch to passing/reading arguments
 	if ( (arguments.arg!=NULL) | (flags&ARGP_FEN_PARSE) | (flags&ARGP_PGN_PARSE) ) {
@@ -152,17 +157,23 @@ main(int argc, char **argv)
 				}
 			} else	in = stdin;
 			
-			PGNoutput pgn = makePGN(NULL, NULL, NULL, NULL);
-			readPGN(in, &pgn);
-			parsePGN(pgn, &currBoard, flags);
-			if (!(strcmp(pgn.header.result,"*")==0 || strcmp(pgn.header.result,"1/2-1/2")==0)) currBoard.blackplaying=!currBoard.blackplaying; // flip board unless its unfinished or a draw
-			if (!(flags&(ARGP_PGN_ALL|ARGP_PGN_STEP)))
-			{
-				if (~flags&ARGP_PGN_HEADER) printHeader(pgn, stdout);
-				if (flags&ARGP_PGN_PRINT) prettyPrintBoard(currBoard);
-				if (~flags&ARGP_PGN_FEN_PRINT) printFEN(currBoard, 0, 0); // TODO FIX THIS UP
+			po = makePGN(NULL, NULL, NULL, NULL);
+			readPGN(in, &po); //TODO error checking
+			parsePGN(po, &currBoard, flags); //TODO error checking
+			if(!isatty(STDIN_FILENO) || strcmp(po.header.result,"*")!=0) { // can't continue with this board if not using player input or the game is finished
+				if (!(strcmp(po.header.result,"*")==0 || strcmp(po.header.result,"1/2-1/2")==0)) currBoard.blackplaying=!currBoard.blackplaying; // flip board unless its unfinished or a draw
+				if (!(flags&(ARGP_PGN_ALL|ARGP_PGN_STEP)))
+				{
+					if (~flags&ARGP_PGN_HEADER) printHeader(po, stdout);
+					if (flags&ARGP_PGN_PRINT) prettyPrintBoard(currBoard);
+					if (~flags&ARGP_PGN_FEN_PRINT) printFEN(currBoard, 0, 0);
+				}
+				return 0;
+			} else { // need to format the po.pgn string for use
+				int len = strlen(po.pgn)-1;
+				while (po.pgn[len]!=' ') len--;
+				po.pgn[len+1] = 0; // remove the result at the end of the string
 			}
-			return 0;
 		}
 
 		if (flags&ARGP_FEN_PARSE) {
@@ -189,7 +200,6 @@ main(int argc, char **argv)
 		
 		readInput(inp, 2);
 		if (*inp == 'Q' || *inp == 'q') return 0;
-		po = makePGN("1", "white", "black", arguments.output_file);
 		switch(*inp) {
 			case '1':
 				localMultiplayer(&currBoard);
@@ -202,6 +212,7 @@ main(int argc, char **argv)
 				break;
 		}
 		setBitBoardFromFEN(FENBOARDDEFAULT);
+		po = makePGN("1", "white", "black", arguments.output_file);
 	}
 	return 0;
 }

@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <time.h>
+#include <ctype.h>
 
 #ifndef PGN_H
 #define PGN_H

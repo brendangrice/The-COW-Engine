@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <libgen.h>
 
 #ifndef ARGP_H // emulating a basic version of <argp.h> for multiplatform
 #define ARGP_H

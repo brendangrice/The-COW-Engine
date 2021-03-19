@@ -48,9 +48,7 @@ argp_usage (const struct argp_state *__restrict __state, FILE *s)
 {
 	// Usage: {EXE} [-{FLAGS}] [--{ARGUMENT}]... {ARGS_DOC}
 	const struct argp *__argp = __state->root_argp;
-	if (__state->argv[0][0]=='.'&&__state->argv[0][1]=='/') { // formatting
-		fprintf(s, "Usage: %s [-", __state->argv[0]+2);
-	} else 	fprintf(s, "Usage: %s [-", __state->argv[0]);
+	fprintf(s, "Usage: %s [-", basename(__state->argv[0])); // print out just the program name
 	for (int i=0; __argp->options[i].key != 0; i++) if (__argp->options[i].key>' ' && !__argp->options[i].arg) fputc(__argp->options[i].key, s); // list all the flags
 	fputs("] ", s);
 	for (int i=0; __argp->options[i].key != 0; i++) if (__argp->options[i].key>' ' && __argp->options[i].arg) fprintf(s, "[-%c %s] ", (char) __argp->options[i].key, __argp->options[i].arg); // list all the flags
