@@ -63,7 +63,7 @@ struct arguments { // used for argument parsing
 	bool fenprint; // print FEN string
 	bool fen; // parse a FEN string to set up the board
 	char *output_file; // new file to write pgn out to
-	char *gamemode;
+	char *gamemode; // game mode to play 
 };
 
 #endif

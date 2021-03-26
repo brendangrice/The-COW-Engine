@@ -117,20 +117,19 @@ main(int argc, char **argv)
 	// if one argument is passed try and take it as input
 	struct arguments arguments;
 	arguments.arg = NULL;
-	arguments.pgn = false;
 	arguments.all = false;
+	arguments.pgn = false;
 	arguments.step = false;
 	arguments.print = true;
 	arguments.header = false;
 	arguments.fenprint = false;
 	arguments.fen = false;
 	arguments.output_file = NULL;
+	arguments.gamemode = NULL;
 
 	argp_parse(&argp, argc, argv, 0, 0, &arguments);
 	po = makePGN("1", "white", "black", arguments.output_file); // set up pgn
 
-	// set up the flags
-	//U8 flags = arguments.pgn*ARGP_PGN_PARSE | arguments.all*ARGP_PGN_ALL | arguments.step*ARGP_PGN_STEP | arguments.print*ARGP_PGN_PRINT | arguments.header*ARGP_PGN_HEADER | arguments.fenprint*ARGP_PGN_FEN_PRINT | arguments.fen*ARGP_FEN_PARSE; // if there's many more args flags will be too cumbersome to use, should switch to passing/reading arguments
 	if ( (arguments.arg!=NULL) | arguments.fen | arguments.pgn ) {
 		if ( !( arguments.fen | arguments.pgn) ) { // neither is specified, tried to figure out which is given
 			if (arguments.arg == NULL || strcmp(arguments.arg, "-")==0) { // read from stdin
