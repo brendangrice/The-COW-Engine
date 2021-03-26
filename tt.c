@@ -1,4 +1,3 @@
-/*
 #include "tt.h"
 #include "ai.h"
 
@@ -15,17 +14,17 @@
 
 // pseudorandom https://en.wikipedia.org/wiki/Xorshift
 
-unsigned int seed = 1804289383;
+U32 seed = 1804289383;
 U64 key = 0ULL;
 U64 piece_key[12][64];
 U64 move_key;
 U64 castle_key[4];
 U64 enpassant_key[8];
 
-unsigned int 
+U32
 randU32()
 {
-	unsigned int number = seed;
+	U32 number = seed;
 	number ^= number << 13;
 	number ^= number >> 17;
 	number ^= number << 5;
@@ -46,9 +45,9 @@ randU64()
 	return u1|(u2<<16)|(u3<<32)|(u4<<48);
 }
 void 
-initHash()
+initHash() // only needs to be done once
 {
-	seed = 1804289383;
+	seed = 1804289383; // reset the seed
 	// pieces on squares
 	for(int i = 0 ; i < 12; i++)
 		for(int j = 0 ; j < 64; j++)
@@ -65,11 +64,11 @@ initHash()
 static inline int 
 getLeastBitIndex(Board b)
 {
-	if(b) return numberOfBits((b&-b)-1);
+	if(b) return popcnt((b&-b)-1);
 	return -1;
 }
 U64 
-generateHash(Boardstate bs, Coord to)
+generateHash(Boardstate bs)
 {
 	key = 0ULL;
 	Board board;
@@ -77,7 +76,7 @@ generateHash(Boardstate bs, Coord to)
 	for(int piece = 0 ; piece < 12; piece++)
 	{
 		// get the board of the current piece
-		(piece<6)?(board=bs.bitboard[piece%6]&(bs.bitboard[total]^ bs.bitboard[black])):((board=bs.bitboard[black]&bs.bitboard[piece%6]));
+		(piece<CHESSPIECES) ? (board = bs.bitboard[piece%CHESSPIECES] & ( bs.bitboard[total]^bs.bitboard[black] )) : ((board = bs.bitboard[black]&bs.bitboard[piece%CHESSPIECES] ));
 		while(board)
 		{
 			int square = getLeastBitIndex(board); 	// get the index of the type of piece
@@ -86,9 +85,9 @@ generateHash(Boardstate bs, Coord to)
 		}
 	}
 	// calculate en passant influence
-	if((to!=-1)&&(bs.movementflags&15))
+	if(bs.movementflags&8)
 	{
-		key ^= enpassant_key[(to%8)]; // get enpassant value of the file that can be take en passant
+		key ^= enpassant_key[(bs.movementflags&7)]; // get enpassant value of the file that can be take en passant
 	}
 	// calculate castling influence
 	U8 castleRights = (U8)bs.movementflags&0xF0; // isolate castle right bits from movementgflags
@@ -107,13 +106,13 @@ generateHash(Boardstate bs, Coord to)
 }
 
 
-TransitionTable hash_table[hash_size]; // global transition table
+TransitionTable hash_table[HASH_SIZE]; // global transition table
 
 void
 TTclear()
 {
 	printf("\nclearing table");
-	for(int i = 0 ; i < hash_size; i++)
+	for(int i = 0 ; (hash_table[i].key) & (i < HASH_SIZE); i++)
 	{
 		hash_table[i].key = 0;
 		hash_table[i].depth = 0;
@@ -126,27 +125,27 @@ float
 TTread(int alpha, int beta, int depth)
 {
 	// create pointer to entry
-	TransitionTable *entry = &hash_table[key % hash_size];
+	TransitionTable entry = hash_table[key % HASH_SIZE];
 	// ensure correct position
-	if(entry->key == key)
+	if(entry.key == key)
 	{
 		// ensure same depth
-		if(entry->depth >= depth)
+		if(entry.depth >= depth)
 		{
 			// if the score is the same
-			if(entry->flag == hash_flag_exact)
+			if(entry.flag == hash_flag_exact)
 			{
 				//printf("\n SCORE EXACT %.3f", entry->score);
-				return entry->score;
+				return entry.score;
 			}
 			// if the score is alpha
-			if((entry->flag == hash_flag_alpha)&&(entry->score <= alpha))
+			if((entry.flag == hash_flag_alpha)&&(entry.score <= alpha))
 			{
 				//printf("\n SCORE ALPHA");
 				return alpha;
 			}
 			// if the score is beta
-			if((entry->flag == hash_flag_beta)&&(entry->score >= beta))
+			if((entry.flag == hash_flag_beta)&&(entry.score >= beta))
 			{
 				//printf("\n SCORE BETA");
 				return beta;
@@ -154,23 +153,15 @@ TTread(int alpha, int beta, int depth)
 		}
 	}
 	//printf("\nEntry does not exist");
-	return no_hash_entry;
+	return NO_HASH_ENTRY;
 }
 //static inline void
 void
 TTwrite(int score, int depth, int flag)
 {
-	TransitionTable *entry = &hash_table[key%hash_size];
+	TransitionTable *entry = &hash_table[key%HASH_SIZE];
 	entry->key = key;
 	entry->score = score;
 	entry->flag = flag;
 	entry->depth = depth;
 }
-
-*/
-
-
-
-
-
-

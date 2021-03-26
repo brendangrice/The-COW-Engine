@@ -15,9 +15,6 @@ const U8 ltoe[] = { // lookup table for converting letters to enum representatio
 };
 #undef _
 
-//TODO use ctype checks for digits and letters
-//TODO when finished testing FEN switch back to using setBoardstate
-
 // START OF ARGP
 
 // read in PGN file and be able to play that out
@@ -26,36 +23,27 @@ const U8 ltoe[] = { // lookup table for converting letters to enum representatio
 const char *argp_program_version = "<The COW Engine v0.91>";
 const char *argp_prgram_bug_address = "<https://github.com/brendangrice/The-COW-Engine>";
 
-static char args_doc[] = "[FILE]";
+static char args_doc[] = "[FILE]\n";
 
 static char doc[] = "Plays Chess.\nWith FILE try to interpret FILE as PGN or FEN. When FILE is - read standard input as PGN or FEN\n\vIf -P or -F aren't given but - or a path is given COW tries to guess if it's PGN or FEN\n";
 
 static struct argp_option options[] = {
+	{"play", 'l', "GAMEMODE", 0, "Pass a gamemode to skip right into playing that"},
+	{0, 1, 0, 0, ""}, // spacing
+	{"fen", 'F', 0, 0, "Take in FEN input"},
 	{"pgn", 'P', 0, 0, "Take in PGN input"},
 	{"all", 'a', 0, 0, "Go through every move when viewing a PGN file"},
 	{"step", 's', 0, 0, "Steps through the moves when viewing a PGN file"},
 	{"print", 'p', 0, 0, "Don't print boards when viewing a PGN file"},
 	{"header", 'h', 0, 0, "Toggle printing pgn header when viewing a PGN file"},
 	{"fen-print", 'f', 0, 0, "Toggles printing FEN string for the current Board when viewing a PGN file"},
-	{"fen", 'F', 0, 0, "Take in FEN input"},
+	{0, 1, 0, 0, ""}, // spacing
 	{"output", 'o', "FILE", 0, "Output PGN notation to specified FILE instead of standard date notation"},
+	{0, 1, 0, 0, ""}, // spacing
 	{"help", '?', 0, 0, "Give this help list"},
 	{"usage", ARGP_HELP_USAGE, 0, 0, "Give a short usage message"},
 	{"version", 'V', 0, 0, "Print program version"},
 	{ 0 }
-};
-
-struct arguments 
-{
-	char *arg;
-	bool all;
-	bool pgn;
-	bool step;
-	bool print;
-	bool header;
-	bool fenprint;
-	bool fen;
-	char *output_file;
 };
 
 static error_t
@@ -72,6 +60,10 @@ parse_opt (int key, char *arg, struct argp_state *state)
 			break;
 		case '?':
 			argp_help(state, stdout);
+			break;
+		case 'l':
+			arguments->gamemode = arg;
+			state->next++; // skip the next argument
 			break;
 		case 'P':
 			arguments->pgn = true;
@@ -113,12 +105,15 @@ parse_opt (int key, char *arg, struct argp_state *state)
 
 static struct argp argp = {options, parse_opt, args_doc, doc};
 
-// END OF ARGP
+/*
+---------- END OF ARGP ----------
+*/
 
 int 
 main(int argc, char **argv) 
 {
 	
+	initHash(); // sets up Zobrist hashing
 	// if one argument is passed try and take it as input
 	struct arguments arguments;
 	arguments.arg = NULL;
@@ -135,20 +130,21 @@ main(int argc, char **argv)
 	po = makePGN("1", "white", "black", arguments.output_file); // set up pgn
 
 	// set up the flags
-	U8 flags = arguments.pgn*ARGP_PGN_PARSE | arguments.all*ARGP_PGN_ALL | arguments.step*ARGP_PGN_STEP | arguments.print*ARGP_PGN_PRINT | arguments.header*ARGP_PGN_HEADER | arguments.fenprint*ARGP_PGN_FEN_PRINT | arguments.fen*ARGP_FEN_PARSE; // if there's many more args flags will be too cumbersome to use, should switch to passing/reading arguments
-	if ( (arguments.arg!=NULL) | (flags&ARGP_FEN_PARSE) | (flags&ARGP_PGN_PARSE) ) {
-		if ( !((flags&ARGP_FEN_PARSE) | (flags&ARGP_PGN_PARSE)) ) { // neither is specified, tried to figure out which is given
+	//U8 flags = arguments.pgn*ARGP_PGN_PARSE | arguments.all*ARGP_PGN_ALL | arguments.step*ARGP_PGN_STEP | arguments.print*ARGP_PGN_PRINT | arguments.header*ARGP_PGN_HEADER | arguments.fenprint*ARGP_PGN_FEN_PRINT | arguments.fen*ARGP_FEN_PARSE; // if there's many more args flags will be too cumbersome to use, should switch to passing/reading arguments
+	if ( (arguments.arg!=NULL) | arguments.fen | arguments.pgn ) {
+		if ( !( arguments.fen | arguments.pgn) ) { // neither is specified, tried to figure out which is given
 			if (arguments.arg == NULL || strcmp(arguments.arg, "-")==0) { // read from stdin
 				char c = getchar();
 				ungetc(c, stdin);
 				//probably pgn
-				if ( (c == '\n') | (c == '[') ) flags |= ARGP_PGN_PARSE;
+				if ( (c == '\n') | (c == '[') ) arguments.pgn = true;
 				//probably fen
-				if (c <= 'z' && c >= 'a') flags |= ARGP_FEN_PARSE;
-			}
+				if (c <= 'z' && c >= 'a') arguments.fen = true;
+			} else 	arguments.pgn = true; // probably a path for a pgn file
 		}
-		if (flags&ARGP_PGN_PARSE) {
-			currBoard = parseFEN(FENBOARDDEFAULT);
+
+		if (arguments.pgn) {
+			setBoardstate();
 			FILE *in;
 			if (arguments.arg != NULL && strcmp(arguments.arg, "-")!=0) {
 				in = fopen(arguments.arg, "r");
@@ -159,15 +155,17 @@ main(int argc, char **argv)
 			} else	in = stdin;
 			
 			po = makePGN(NULL, NULL, NULL, NULL);
-			readPGN(in, &po); //TODO error checking
-			parsePGN(po, &currBoard, flags); //TODO error checking
+			#define ERR() {fputs("Bad PGN Input\n", stderr); exit(1);}
+			if (!readPGN(in, &po)) ERR();
+			if (!parsePGN(po, &currBoard, &arguments)) ERR();
+			#undef ERR
 			if(!isatty(STDIN_FILENO) || strcmp(po.header.result,"*")!=0) { // can't continue with this board if not using player input or the game is finished
 				if (!(strcmp(po.header.result,"*")==0 || strcmp(po.header.result,"1/2-1/2")==0)) currBoard.blackplaying=!currBoard.blackplaying; // flip board unless its unfinished or a draw
-				if (!(flags&(ARGP_PGN_ALL|ARGP_PGN_STEP)))
+				if (!(arguments.all|arguments.step)) // if neither of these a set just print
 				{
-					if (~flags&ARGP_PGN_HEADER) printHeader(po, stdout);
-					if (flags&ARGP_PGN_PRINT) prettyPrintBoard(currBoard);
-					if (~flags&ARGP_PGN_FEN_PRINT) printFEN(currBoard, 0, 0);
+					if (!arguments.header) printHeader(po, stdout);
+					if (arguments.print) prettyPrintBoard(currBoard);
+					if (!arguments.fenprint) printFEN(currBoard, 0, 0);
 				}
 				return 0;
 			} else { // need to format the po.pgn string for use
@@ -177,7 +175,7 @@ main(int argc, char **argv)
 			}
 		}
 
-		if (flags&ARGP_FEN_PARSE) {
+		if (arguments.fen) {
 
 			char fenstring[60]; // about 60 chars long
 			if (arguments.arg == NULL || strcmp(arguments.arg, "-")==0) { // read from stdin
@@ -187,9 +185,26 @@ main(int argc, char **argv)
 					prettyPrintBoard(currBoard);
 					return 0; // have to return here if we're piping in
 				}
-			} else 	currBoard = parseFEN(FENBOARDDEFAULT); // just in case
+			} else 	setBoardstate(); // just in case
 		}
-	} else 	currBoard = parseFEN(FENBOARDDEFAULT);
+	} else 	setBoardstate();
+
+
+	// skip straight into a gamemode
+	//
+	if (arguments.gamemode!=NULL) {
+		if (strcmp(arguments.gamemode, "1")==0 || strcmp(arguments.gamemode, "lmp")==0) {
+				localMultiplayer(&currBoard);
+		} else if (strcmp(arguments.gamemode, "2")==0 || strcmp(arguments.gamemode, "lai")==0) {
+				localAI(&currBoard);
+		} else {
+			fputs("Bad argument: ", stdout);
+			fputs(arguments.gamemode, stdout);
+			putchar('\n');
+		}
+		setBoardstate(); // reset boardstate
+		po = makePGN("1", "white", "black", arguments.output_file); // reset pgn
+	}
 
 	char inp[2]; // input
 	while (1) {
@@ -212,18 +227,20 @@ main(int argc, char **argv)
 				puts("Bad Input");
 				break;
 		}
-		parseFEN(FENBOARDDEFAULT);
-		po = makePGN("1", "white", "black", arguments.output_file);
+		setBoardstate(); // reset boardstate
+		po = makePGN("1", "white", "black", arguments.output_file); // reset pgn
 	}
 	return 0;
 }
 
-inline void strrep(char *s, char pre, char post) // string replace
+inline void 
+strrep(char *s, char pre, char post) // string replace
 {
 	for (int i=0; i<strlen(s); i++) if (s[i]==pre) s[i]=post;
 }
 
-void strrm(char *s, char rm) // string remove
+void 
+strrm(char *s, char rm) // string remove
 {
 	U8 len = strlen(s);
 	char *ptr = s;
@@ -242,6 +259,7 @@ setBoardstate() // sets Boards to be equal to the default values for a chess boa
 {
 	prevBoard = makeBoardstate(NULL, 0xF0, false, 1, 1);
 	currBoard = makeBoardstate(NULL, 0xF0, false, 1, 1);
+	currBoard.key = DEFAULTBOARDKEY;
 
 	// encoded chess board
 	// First half is black, second is white
@@ -265,6 +283,7 @@ makeBoardstate(Board *bitboard, U8 movementflags, bool blackplaying, U16 halfmov
 	newbs.blackplaying = blackplaying;
 	newbs.halfmove = halfmove;
 	newbs.fiftymove = fiftymove;
+	newbs.key = BOARD_KEY_NOT_SET;
 	
 	return newbs;
 }
@@ -272,12 +291,7 @@ makeBoardstate(Board *bitboard, U8 movementflags, bool blackplaying, U16 halfmov
 Boardstate *
 cpyBoardstate(Boardstate *to, Boardstate from)
 {
-		memcpy(to->bitboard, from.bitboard, BITBOARDSIZE);
-		to->movementflags = from.movementflags;
-		to->blackplaying = from.blackplaying;
-		to->halfmove = from.halfmove;
-		to->fiftymove = from.fiftymove;
-		return to;
+	return memcpy(to, &from, BOARDSTATESIZE);
 }
 
 char 
@@ -286,10 +300,9 @@ findPiece(Coord pos, U8 *piece, bool *colourblack, Board *bitboard) //returns a 
 	U8 extra;
 	if (piece == NULL) piece = &extra;
 	if (colourblack == NULL) colourblack = (bool *) &extra;
-	U64 p = 1ULL;
 	char out = 'A'; // temp for checking for errors
 	*colourblack = false;
-	U64 bit = bitboard[total]&(p<<pos); // gets whatever piece is at the location
+	U64 bit = bitboard[total]&(1ULL<<pos); // gets whatever piece is at the location
 	if (bit) {
 		if(bit&bitboard[pawn]) { // ands bit to see if the piece is present on this board
 			*piece=pawn;
@@ -330,30 +343,15 @@ Board
 calculateAttackVectors(Board *bitboard, bool blackplaying) //returns an attack vector for a colour
 {
 	char piece;
+	U8 piecenum;
+	bool piececolour;
 	Board vector = 0;
 	for (int i = 0; i < 64; i++) {
-		if ((piece=findPiece(i, NULL, NULL, bitboard))!='.') { // find every piece that isn't a blank piece
-			if ((piece == 'P') & (!blackplaying)) vector |= whitePawnAttackVectors(i, NULL); // white and black have different attacks
-			if ((piece == 'p') & blackplaying) vector |= blackPawnAttackVectors(i, NULL);
-			piece-=32*blackplaying; //if the piece is black subtract so that the char goes into the switch cases nicely
-			switch(piece) 
-			{
-				case 'R':
-					vector |= rookAttackVectors(i, bitboard);
-					break;
-				case 'N':
-					vector |= knightAttackVectors(i, NULL);
-					break;
-				case 'B':
-					vector |= bishopAttackVectors(i, bitboard);
-					break;
-				case 'Q':
-					vector |= queenAttackVectors(i, bitboard);
-					break;
-				case 'K':
-					vector |= kingAttackVectors(i, NULL);
-					break;
-			}
+		if (( (piece=findPiece(i, &piecenum, &piececolour, bitboard))!='.' ) && (piececolour == blackplaying)) { // find every piece that isn't a blank piece and is matching the colour
+			piecenum++; // offset by one to account for the two different pawn funcs
+			
+			if (piece == 'P') piecenum = 0; // white and black have different attacks
+			vector |= attackVectors[piecenum](i, bitboard); // lookup table of functions for attacks
 		}
 	}
 	return vector;
@@ -366,31 +364,9 @@ calculateMovementVector(Boardstate bs, Coord pos) //returns a vector for where a
 	U8 piece = nopiece;
 	bool colour;
 	findPiece(pos, &piece, &colour, bs.bitboard);
-	switch(piece) {
-		case pawn:
-			if (colour) {
-				blackPawnMovement(pos, 0, bs, &vector);
-			} else	whitePawnMovement(pos, 0, bs, &vector);
-			break;
-		case rook:
-			rookMovement(pos, 0, bs, &vector);
-			break;
-		case knight:
-			knightMovement(pos, 0, bs, &vector);
-			break;
-		case bishop:
-			bishopMovement(pos, 0, bs, &vector);
-			break;
-		case queen:
-			queenMovement(pos, 0, bs, &vector);
-			break;
-		case king:
-			kingMovement(pos, 0, bs, &vector);
-			break;
-		default:
-			vector = 0;
-			break;
-	}
+	piece++;
+	if ((piece==pawn+1) && (!colour)) piece = 0; // white pawn
+	movementVectors[piece](pos, 0, bs, &vector); // just want the vector
 	return vector;
 }
 
@@ -642,7 +618,7 @@ parseInput(char *s, Coord *from, Coord *to) // used with stdin input
 			// highlighting
 			// fauxmove from to
 			if (s[0]<'a') { // highlighting
-				temp = atoc(s[0]-32, s[1]);
+				temp = atoc(s[0]+32, s[1]);
 				if (!(currBoard.bitboard[total]&1ULL<<temp)) break; // make sure there's a piece there to print
 				printHighlightBoard(currBoard, calculateMovementVector(currBoard, temp));
 				break;
@@ -699,30 +675,6 @@ parseInput(char *s, Coord *from, Coord *to) // used with stdin input
 }
 #undef INBOUNDS
 
-U8
-defaultPromotion() {
-	return queen;
-}
-
-U8
-getPromotion() {
-	puts("Enter which piece you want (R=1, N=2, B=3, Q=4): ");
-	char pieceno[2];
-PROMOTION:
-	readInput(pieceno, 2);
-	switch(*pieceno-'0') {
-		case(rook):
-		case(knight):
-		case(bishop):
-		case(queen):
-			return *pieceno-'0';
-			break;
-		default:
-			goto PROMOTION;
-			break;
-	}
-}
-
 bool 
 movePiece(Coord from, Coord to, bool PGN, U8(*promote)()) // works exclusively with the current board
 {
@@ -740,9 +692,35 @@ movePiece(Coord from, Coord to, bool PGN, U8(*promote)()) // works exclusively w
 
 	currBoard.halfmove++; // inc
 
-	if (currBoard.bitboard[pawn]!=prevBoard.bitboard[pawn] || popcnt(currBoard.bitboard[total] != popcnt(prevBoard.bitboard[total]))) currBoard.fiftymove = currBoard.halfmove; // if a move was made that fits the conditions of the 50 move rule update the value
+	if (currBoard.bitboard[pawn]!=prevBoard.bitboard[pawn] || (popcnt(currBoard.bitboard[total]) != popcnt(prevBoard.bitboard[total]))) currBoard.fiftymove = currBoard.halfmove; // if a move was made that fits the conditions of the 50 move rule update the value
 
 	return true;
+}
+
+U8
+defaultPromotion() 
+{
+	return queen;
+}
+
+U8
+getPromotion() 
+{
+	puts("Enter which piece you want (R=1, N=2, B=3, Q=4): ");
+	char pieceno[2];
+PROMOTION:
+	readInput(pieceno, 2);
+	switch(*pieceno-'0') {
+		case(rook):
+		case(knight):
+		case(bishop):
+		case(queen):
+			return *pieceno-'0';
+			break;
+		default:
+			goto PROMOTION;
+			break;
+	}
 }
 
 bool
@@ -914,7 +892,8 @@ fauxMove(Coord from, Coord to, Boardstate bs, Boardstate *nbs, U8(*promote)()) /
 	return true;
 }
 
-inline Coord btoc(Board b) // board to coordinate
+inline Coord 
+btoc(Board b) // board to coordinate
 {
 	if (!b) return 0;
 	Coord pos = 0;
@@ -953,21 +932,14 @@ bool
 inCheckMate(Boardstate bs)
 {
 	if (!inCheck(bs)) return false;
-	// Can the King move anywhere
-	//         111
-	//         1K1
-	//         111
-	// Find relevent King and get his Coordinates
 	
 	Board pieces = getPlayerBoard(bs.bitboard, bs.blackplaying); // Board containing just the king in question
 
 	Coord kingc = btoc(bs.bitboard[king]&pieces); // position of the king
 	
-	//check if any other piece can move to break mate
-	
 	Board vectors = queenAttackVectors(kingc, bs.bitboard) | knightAttackVectors(kingc, NULL); // every position that can be attacking the king & the king can move to
 
-	return iterateVector(bs, pieces, vectors, NULL, 1) == 0; // try to move all of your pieces to ANY square
+	return iterateVector(bs, pieces, vectors, NULL, 1) == 0; // try to move ALL of your pieces to ANY square that could be threatening the king
 }
 
 // 1) Not in check
@@ -978,6 +950,6 @@ bool
 inStaleMate(Boardstate bs)
 {
 	if (inCheck(bs)) return false; // can't be in check and in stalemate
-	Board pieces = getPlayerBoard(bs.bitboard, bs.blackplaying); //returns a board of all the players pieces
-	return iterateVector(bs, pieces, -1, NULL, 1) == 0; // try to move all of your pieces to ANY square
+	Board pieces = getPlayerBoard(bs.bitboard, bs.blackplaying); // returns a board of all the players pieces
+	return iterateVector(bs, pieces, -1, NULL, 1) == 0; // try to move ALL of your pieces to ANY square
 }

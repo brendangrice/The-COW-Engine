@@ -6,8 +6,10 @@
 #ifndef MAIN_H
 #define MAIN_H
 
-#include "argp.h"
+#define MAXTURNS 500 // maximum turns expected (half turns)
+
 #include "types.h"
+#include "argp.h"
 #include "moves.h"
 
 #include "eval.h"
@@ -16,10 +18,8 @@
 #include "pgn.h"
 #include "fen.h"
 #include "gamemodes.h"
-
-/*
 #include "tt.h"
-*/
+
 
 // Should attack boards be tracked like this
 // when they need to constantly be re-evaluated anyways?

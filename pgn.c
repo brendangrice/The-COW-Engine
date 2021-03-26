@@ -75,13 +75,20 @@ makePGN(char *round, char *white, char *black, char *fp)
 //
 
 bool
+isWhitespace(char c)
+{
+	if (c == ' ' || c == '\n' || c == '\v' || c == '\t') return true;
+	return false;
+}
+
+bool
 readPGN(FILE *in, PGNoutput *po) 
 {
 	char c, d;
 	char inp[PGNHEADERSIZE]; //should only ever be as large as the largest header
 	while (1) {
 		c = fgetc(in);
-		if (isspace(c)) continue;
+		if (isWhitespace(c)) continue;
 		if (c=='1') goto READPGNBODY; // no header 
 		if (c=='[') break; // header
 		if (c==EOF) return false;
@@ -123,7 +130,7 @@ readPGN(FILE *in, PGNoutput *po)
 	// discard everything else
 	while (1) {
 		c = fgetc(in);
-		if (isspace(c)) continue; // skip this line
+		if (isWhitespace(c)) continue; // skip this line
 		if (c=='1') break; // found the body
 		while ((d=fgetc(in))!='\n' && d!=EOF); // go to next line	
 	}
@@ -160,7 +167,7 @@ promotionPGN()
 }
 
 bool
-parsePGN(PGNoutput po, Boardstate *bs, U8 flags) // maybe remove all spaces to make parsing easier??
+parsePGN(PGNoutput po, Boardstate *bs, struct arguments *args) // maybe remove all spaces to make parsing easier??
 { 
 	//parse pgn as input
 	char white[9], black[9];
@@ -192,13 +199,13 @@ parsePGN(PGNoutput po, Boardstate *bs, U8 flags) // maybe remove all spaces to m
 		// white input
 		ERR(parseInput(white, &from, &to), white);
 		ERR(movePiece(from, to, false, promotionPGN), white);
-		if (flags&(ARGP_PGN_ALL|ARGP_PGN_STEP)) {
-			if (flags&ARGP_PGN_HEADER) printHeader(po, stdout);
-			if (flags&ARGP_PGN_PRINT) prettyPrintBoard(*bs);
-			if (flags&ARGP_PGN_FEN_PRINT) printFEN(*bs, 0, 0);
+		if (args->all|args->step) {
+			if (args->header) printHeader(po, stdout);
+			if (args->print) prettyPrintBoard(*bs);
+			if (args->fenprint) printFEN(*bs, 0, 0);
 
 
-			if (flags&ARGP_PGN_STEP) if ((c=getchar())=='q' || c==EOF) return true;
+			if (args->step) if ((c=getchar())=='q' || c==EOF) return true;
 		}
 		bs->blackplaying=!bs->blackplaying; // switch players
 		diff = strchr(pos, ' ');
@@ -217,18 +224,18 @@ parsePGN(PGNoutput po, Boardstate *bs, U8 flags) // maybe remove all spaces to m
 		// black input
 		ERR(parseInput(black, &from, &to), black);
 		ERR(movePiece(from, to, false, promotionPGN), black);
-		if (flags&(ARGP_PGN_ALL|ARGP_PGN_STEP)) {
-			if (flags&ARGP_PGN_HEADER) printHeader(po, stdout);
-			if (flags&ARGP_PGN_PRINT) prettyPrintBoard(*bs);
-			if (flags&ARGP_PGN_FEN_PRINT) printFEN(*bs, 0, 0);
+		if (args->all|args->step) {
+			if (args->header) printHeader(po, stdout);
+			if (args->print) prettyPrintBoard(*bs);
+			if (args->fenprint) printFEN(*bs, 0, 0);
 
 
-			if (flags&ARGP_PGN_STEP) if ((c=getchar())=='q' || c==EOF) return true;
+			if (args->step) if ((c=getchar())=='q' || c==EOF) return true;
 		}
 		bs->blackplaying=!bs->blackplaying; // switch players
 	}
 	#undef ERR
-	return false;
+	return true;
 }
 
 bool

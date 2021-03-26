@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <time.h>
-#include <ctype.h>
 
 #ifndef PGN_H
 #define PGN_H
@@ -22,7 +21,7 @@ typedef struct {
 	char time[PGNHEADERSIZE];
 } PGNheader;
 
-#define PGNSTRINGSIZE (4+(18*100)) // about 18 chars per turn at 100 turns with the result being printed at the end
+#define PGNSTRINGSIZE (4+(18*(MAXTURNS/2))) // about 18 chars per turn at MAXTURNS/2 with extra room for the result at the end
 
 typedef struct {
 	PGNheader header;
@@ -43,7 +42,7 @@ typedef struct {
 
 PGNoutput makePGN(char *round, char *white, char *black, char *fp); // makes pgn object and sets up all the memory and default values associated. Returns the pgn
 bool readPGN(FILE *in, PGNoutput *po);
-bool parsePGN(PGNoutput po, Boardstate *bs, bool step);
+bool parsePGN(PGNoutput po, Boardstate *bs, struct arguments *arguments);
 bool appendMovePGN(Boardstate pre, Boardstate post, PGNoutput *po, Coord from, Coord to); // Takes the previous boardstate and the current boardstate to figure out what changes have been made to the board with the moves from and to and updates the pgn body appropriately. Bool returns whether or not it updates successfully
 void printHeader(PGNoutput po, FILE *s); // prints the basic 7 header values of a PGN file
 bool flushPGN(Boardstate bs, PGNoutput po); // writes to file described in po.fp

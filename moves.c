@@ -3,7 +3,7 @@
 bool (*movementVectors[]) (Coord from, Coord to, Boardstate bs, Board *vector) = {whitePawnMovement, blackPawnMovement, rookMovement, knightMovement, bishopMovement, queenMovement, kingMovement};
 Board (*attackVectors[]) (Coord pos, Board *bitboard) = {whitePawnAttackVectors, blackPawnAttackVectors, rookAttackVectors, knightAttackVectors, bishopAttackVectors, queenAttackVectors, kingAttackVectors};
 
-//TODO COMBINE PAWNMOVEMENT AND ATTACK, MAKING THEM WORK OFF ONE FUNCTION BASED ON COLOUR
+//TODO COMBINE WHITEPAWNMOVEMENT AND BLACKPAWNATTACK, MAKING THEM WORK OFF ONE FUNCTION BASED ON COLOUR
 
 U8
 whitePawnMovement(Coord from, Coord to, Boardstate bs, Board *vector)

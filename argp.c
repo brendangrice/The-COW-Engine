@@ -24,8 +24,8 @@ argp_parse (const struct argp *_argp, int _argc, char **_argv, unsigned _flags, 
 				str = _argv[i]+2; // str after --
 				int match = 1;
 				for (int j=0; _argp->options[j].name != NULL || _argp->options[j].key != 0; j++) {
-					if (strcmp(str, _argp->options[j].name)==0) { // try to find a match
-						_argp->parser( _argp->options[j].key, _argv[j+1], &_argp_state );
+					if (_argp->options[j].name != NULL && strcmp(str, _argp->options[j].name)==0) { // try to find a match
+						_argp->parser( _argp->options[j].key, _argv[i+1], &_argp_state );
 						match = 0;
 					}
 				}
@@ -49,7 +49,8 @@ argp_usage (const struct argp_state *__restrict __state, FILE *s)
 	// Usage: {EXE} [-{FLAGS}] [--{ARGUMENT}]... {ARGS_DOC}
 	const struct argp *__argp = __state->root_argp;
 	fprintf(s, "Usage: %s [-", basename(__state->argv[0])); // print out just the program name
-	for (int i=0; __argp->options[i].key != 0; i++) if (__argp->options[i].key>' ' && !__argp->options[i].arg) fputc(__argp->options[i].key, s); // list all the flags
+	for (int i=0; __argp->options[i].key != 0 || __argp->options[i].name != NULL; i++) 
+		if (__argp->options[i].key>' ' && !__argp->options[i].arg) fputc(__argp->options[i].key, s); // list all the flags
 	fputs("] ", s);
 	for (int i=0; __argp->options[i].key != 0; i++) if (__argp->options[i].key>' ' && __argp->options[i].arg) fprintf(s, "[-%c %s] ", (char) __argp->options[i].key, __argp->options[i].arg); // list all the flags
 	for (int i=0; __argp->options[i].name != NULL; i++) {
@@ -100,8 +101,6 @@ argp_help (const struct argp_state *__restrict __state, FILE *s)
 
 	char key[4] = {'-', 0, ',', 0};
 	char name[30];
-	name[0] = '-';
-	name[1] = '-';
 
 	fputs(doc, s);
 	fputc('\n',s);
@@ -109,7 +108,13 @@ argp_help (const struct argp_state *__restrict __state, FILE *s)
 		key[0] = '-';
 		key[1] = __argp->options[i].key;
 		if (key[1]<=' ') key[0] = 0; // proper spacing
-		strncpy(name+2, __argp->options[i].name, 20);
+
+		if (__argp->options[i].name != NULL) {
+			name[0] = '-';
+			name[1] = '-';
+			strncpy(name+2, __argp->options[i].name, 20);
+		} else	name[0]=0; // proper spacing
+
 		if (__argp->options[i].arg!=NULL) { // --output=FILE
 			strncat(name, "=", 2);
 			strncat(name, __argp->options[i].arg, 9);

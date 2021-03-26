@@ -15,14 +15,15 @@ typedef int error_t;
 #define ARGP_KEY_ARG		0
 #define ARGP_HELP_USAGE		0x01
 
-
-#define ARGP_PGN_PARSE 0x1 // parse a pgn string to play out a board
-#define ARGP_PGN_ALL 0x2 // go thorugh all boards
-#define ARGP_PGN_STEP 0x4 // step through boards
-#define ARGP_PGN_PRINT 0X8 // print boards that are gone through
-#define ARGP_PGN_HEADER 0X10 // print the PGN header
-#define ARGP_PGN_FEN_PRINT 0X20 // print FEN string
-#define ARGP_FEN_PARSE 0x40 // parse a FEN string to set up the board
+/*
+// parse a pgn string to play out a board
+// go thorugh all boards
+// step through boards
+// print boards that are gone through
+// print the PGN header
+// print FEN string
+// parse a FEN string to set up the board
+*/
 
 struct argp;			/* fwd declare this type */
 struct argp_state;		/* " */

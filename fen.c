@@ -13,6 +13,8 @@ parseFEN(char *FEN)
 	
 	bs.movementflags = 0;
 	bs.blackplaying = false;
+	bs.fiftymove = 0;
+	bs.halfmove = 0;
 	
 	int rank = 8; // start on the 8 rank
 	int file = 0; // start at the A file
@@ -126,8 +128,28 @@ parseFEN(char *FEN)
 		FEN++;
 	}
 	
-	// TODO assign enpassant to movement flags
-	
+	FEN++;	
+
+	U8 enpassant = 'a'-*FEN+7;
+	if (enpassant>0 && enpassant<7) { // en passant
+		bs.movementflags |= enpassant;
+		bs.movementflags |= 0x8;
+		FEN++; // don't need to know the file
+	}
+
+	FEN+=2;
+	char str[10];
+	char *ptr = str;
+	strncpy(str, FEN, 10);
+
+	while (' '!=*(ptr++));
+	bs.fiftymove = atoi(str);
+	bs.halfmove = atoi(ptr);
+
+	bs.halfmove*=2;
+	if (!bs.blackplaying) bs.halfmove--;
+
+	bs.key = generateHash(bs); // generate key
 	return bs;
 }
 
@@ -225,11 +247,10 @@ void printFEN(Boardstate bs, Coord from, Coord to)
 	{
 		printf(" -");
 	}
-	// TODO make these do something, hardcoded at the moment, so that it will still work in FEN viewers
-	// halfmove clock
-	printf(" 0");
+	// fifty move clock
+	printf(" %d", bs.halfmove-bs.fiftymove);
 	// fullmove clock
-	printf(" 1");
+	printf(" %d", bs.halfmove/2);
 	printf("\n");
 }
 
