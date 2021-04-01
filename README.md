@@ -3,8 +3,6 @@ or Chess of Wisdom
  
 Simple CLI-Chess engine
 
-Branch for testing changes making the game more easy to read/play
-
 Run make to build
 
 White/Black are displayed as capital/lowercase letter respectively. Blank space is represented with '.'
